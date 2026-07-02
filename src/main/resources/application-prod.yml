@@ -19,3 +19,15 @@ spring:
       host: localhost
       port: 6379
       password: prod_redis_password
+
+dubbo:
+  application:
+    name: Dubbo-IAM-Center
+  registry:
+    address: zookeeper://101.34.8.116:2181
+  protocol:
+    name: dubbo
+    port: -1
+  consumer:
+    check: false
+    lazy: true
