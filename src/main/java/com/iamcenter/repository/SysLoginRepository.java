@@ -30,5 +30,20 @@ public interface SysLoginRepository extends JpaRepository<SysLogin, Long> {
 //		String sql = "select count(loginId) as kk from sys_login where appId=? and loginName=?";
 //		return jdbcTemplate.queryForObject(sql, boolean.class, new Object[] { appId, loginName });
 //	}
+	
+	
+//	/**
+//	 * 读取用户名关联登录标识。<br>
+//	 * 
+//	 * @param appId
+//	 *            应用标识.<br>
+//	 * @param loginName
+//	 *            登录名(例如:手机号). <br>
+//	 * @return
+//	 */
+//	public java.util.List<Long> listSysLoginIds(String appId, String loginName) {
+//		String sql = "select loginId from sys_login where appId=? and loginName=?";
+//		return jdbcTemplate.queryForList(sql, Long.class, appId, loginName);
+//	}
 
 }

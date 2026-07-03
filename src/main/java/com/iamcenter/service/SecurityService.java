@@ -1,6 +1,5 @@
 package com.iamcenter.service;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -308,12 +307,11 @@ public class SecurityService implements SecurityContract {
 //			vo.setRoleId(mapper.getRoleId());
 //			return vo;
 //		}).collect(Collectors.toList());
-		return loginRoleRepository.queryLoginRole(loginId).stream().map(mapper -> {
+		return loginRoleRepository.listLoginRole(loginId).stream().map(mapper -> {
 			LoginRoleVO vo = new LoginRoleVO();
 			vo.setRoleId(String.valueOf(mapper[0]));
 			vo.setRoleCode(String.valueOf(mapper[1]));
 			vo.setRoleName(String.valueOf(mapper[2]));
-			vo.setLoginId("_NA_");
 			return vo;
 		}).collect(Collectors.toList());
 	}

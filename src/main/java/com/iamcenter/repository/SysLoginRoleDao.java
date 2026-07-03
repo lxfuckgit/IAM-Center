@@ -9,7 +9,10 @@ import com.iamcenter.domain.security.SysLoginRole;
 
 public interface SysLoginRoleDao extends JpaRepository<SysLoginRole, String> {
 	@Query(value = "select b.id,b.role_code,b.role_name,b.role_desc from sys_login_role a left join sys_role b on a.role_id=b.id where login_id=?1", nativeQuery = true)
-	public List<Object[]> queryLoginRole(Long loginId);
+	public List<Object[]> listLoginRole(Long loginId);
+	
+	@Query(value = "select b.role_code from sys_login_role a left join sys_role b on a.role_id=b.id where a.login_id=?1", nativeQuery = true)
+	public List<String> listLoginRoleCode(Long loginId);
 
 	@Query(value = "delete from sys_login_role where login_id=?1 and role_id=?2", nativeQuery = true)
 	public boolean deleteLoginRole(Long loginId, String roleId);

@@ -2,7 +2,6 @@ package com.iamcenter.business;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -210,7 +209,7 @@ public class SecurityBusiness {
 	public long doRegister(SysLogin loginInfo, List<String> loginRole) {
 		logger.info("--->正在创建用户(appId={} loginName={})登录信息!", loginInfo.getAppId(), loginInfo.getLoginName());
 		// 新注册用户登录状态：INIT
-		loginInfo.setLoginState(StatusEnum.INIT.name());
+		loginInfo.setLoginState(StatusEnum.ENABLE.name());
 		sysLoginRepository.save(loginInfo);
 		logger.info("--->当前登录账号(loginName={})已注册完成!", loginInfo.getLoginName());
 
@@ -247,25 +246,17 @@ public class SecurityBusiness {
 	}
 	
 	public RstResult<LoginVO> doLogin(SysLogin login) {
-		List<Long> idsList = listSysLoginIds(login.getAppId(), login.getLoginName());
-		if (null == idsList || idsList.size() == 0) {
+		SysLogin entity = sysLoginRepository.findByAppIdAndLoginName(login.getAppId(), login.getLoginName());
+		if (null == entity) {
 			logger.warn("----当前应用【{}】的登录用户【{}】有误!", login.getAppId(), login.getLoginName());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
 		}
-		
-		if (null != idsList && idsList.size() >= 2) {
-			logger.warn("----当前应用【{}】的登录用户【{}】冲突!", login.getAppId(), login.getLoginName());
-			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
-		}
-		
-		Optional<SysLogin> optional = sysLoginRepository.findById(idsList.get(0));
-		if (optional.isEmpty() || !optional.get().getLoginPwd().equals(DigestUtils.md5Hex(login.getLoginPwd()))) {
+		if (!entity.getLoginPwd().equals(DigestUtils.md5Hex(login.getLoginPwd()))) {
 			logger.warn("----当前应用【{}】的登录密码【{}】有误!", login.getAppId(), login.getLoginName());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
 		}
 
-		/* 1、记录token状态 */
-		SysLogin entity = optional.get();
+		/* 1、更新记录token状态 */
 		String token = getToken(entity.getAppId(), entity.getLoginName(), entity.getLoginPwd());
 		entity.setLoginToken(token);
 		entity.setLoginExpire(System.currentTimeMillis() + 36000L);
@@ -278,6 +269,7 @@ public class SecurityBusiness {
 		// session.setToken(token);
 		// session.setLoginType(loginType);
 		
+		/* 3、响应登录成功的报文 */
 		LoginVO loginVO = new LoginVO(token);
 		loginVO.setUserId(entity.getLoginId());
 		loginVO.setNickName(entity.getNickName());
@@ -285,30 +277,9 @@ public class SecurityBusiness {
 		loginVO.setStatus(entity.getLoginState());
 		loginVO.setUserIcon(entity.getIconUrl());
 		loginVO.setCreateTime(entity.getCreateTime().toString());
+		// 查询登录用户关联角色
+		loginVO.setRoleList(sysLoginRoleDao.listLoginRoleCode(entity.getLoginId()));
 		return ResultBuilder.normalResult(loginVO);
-
-		// Users user = null;
-		// Long nowTime = UtilDataTime.getNowTime();
-
-		// add login log(以后这里埋点)
-		// UsersLog log = new UsersLog();
-		// log.setCode("users");
-		// log.setType("action");
-		// log.setOperating("login");
-		// log.setAddtime(String.valueOf(nowTime));
-		//
-		// try {
-		// // 查询用户数据是否存在
-		// user = this.getUser(username, password);
-		// if (!StringUtils.isEmpty(user.getUsername())) {
-		// System.out.println("user login sucess");
-		// } else {
-		// System.out.println("user login fail");
-		// }
-		// } catch (BizException e1) {
-		//
-		// }
-
 	}
 
 	/**
@@ -323,20 +294,6 @@ public class SecurityBusiness {
 	public List<SysLogin> getSysLogin(String appId, String loginName) {
 		String sql = "select loginId,loginName,partyId from sys_login where appId=? and loginName=?";
 		return jdbcTemplate.query(sql, new BeanPropertyRowMapper<SysLogin>(SysLogin.class), appId, loginName);
-	}
-	
-	/**
-	 * 读取用户名关联登录标识。<br>
-	 * 
-	 * @param appId
-	 *            应用标识.<br>
-	 * @param loginName
-	 *            登录名(例如:手机号). <br>
-	 * @return
-	 */
-	public List<Long> listSysLoginIds(String appId, String loginName) {
-		String sql = "select loginId from sys_login where appId=? and loginName=?";
-		return jdbcTemplate.queryForList(sql, Long.class, appId, loginName);
 	}
 	
 	/**
@@ -365,7 +322,7 @@ public class SecurityBusiness {
 	public Long getLoginIdByToken(String appId, String token) {
 		String sql = "select loginId from sys_login where appId=? and login_token=?";
 		try {
-			return jdbcTemplate.queryForObject(sql, new Object[] { appId, token }, Long.class);
+			return jdbcTemplate.queryForObject(sql, Long.class, new Object[] { appId, token });
 		} catch (Exception e) {
 			logger.error(e.getMessage());
 			return null;
