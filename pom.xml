@@ -48,7 +48,7 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
         </dependency>
-
+		<!-- Dubbo -->
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-spring-boot-starter</artifactId>
@@ -60,27 +60,25 @@
             <version>${dubbo.version}</version>
         </dependency>
 
-<!-- 
+		<!-- JJWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
             <version>${jjwt.version}</version>
         </dependency>
-
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
--->
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -102,8 +100,8 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        
-        <!-- 内部开发框架 -->
+
+		<!-- 内部开发框架 -->
         <dependency>
 			<groupId>com.saasapi.contract</groupId>
 			<artifactId>saasapi-contract-security</artifactId>

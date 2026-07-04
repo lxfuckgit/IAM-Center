@@ -13,7 +13,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
 import com.iamcenter.domain.security.SysResource;
@@ -65,6 +67,9 @@ public class SecurityService implements SecurityContract {
 	
 	@Autowired
 	protected JdbcTemplate jdbcTemplate;
+	
+	@Autowired
+	protected JwtUtil jwtUtil;
 	
 	@Override
 	public RstResult<String> createMenu(MenuDTO dto) {
@@ -179,6 +184,9 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
+		if(StringUtils.isEmpty(SecurityContextHolder.getContext().getAuthentication().getName())) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+		}
 		if (StringUtils.isBlank(dto.getRoleCode()) && StringUtils.isBlank(dto.getRoleName())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
@@ -188,11 +196,12 @@ public class SecurityService implements SecurityContract {
 			logger.warn("------>角色编码:{}对应的角色名({})已存在,请确认!", role.getCode(), role.getName());
 			return ResultBuilder.buildResult(SecurityECode.ROLE_EXISIT);
 		}
-
+		
 		SysRole entity = new SysRole();
 		entity.setAppId(dto.getAppId());
 		entity.setCode(dto.getRoleCode());
 		entity.setName(dto.getRoleName());
+		entity.setCreatorId(SecurityContextHolder.getContext().getAuthentication().getName());
 		entity.setRemark(dto.getRoleRemark());
 		roleRepository.save(entity);
 		return ResultBuilder.normalResult();

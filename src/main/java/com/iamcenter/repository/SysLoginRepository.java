@@ -16,6 +16,8 @@ public interface SysLoginRepository extends JpaRepository<SysLogin, Long> {
 	public SysLogin findByAppIdAndLoginName(String appId, String loginName);
 
 	public SysLogin findByAppIdAndExtLoginId(String appId, String extLoginId);
+	
+	public int deleteByLoginToken(String loginToken);
 
 	/**
 	 * 检查是否存的当前登录账号

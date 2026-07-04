@@ -3,7 +3,6 @@ package com.iamcenter.business;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -11,13 +10,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.constant.Constant;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
 import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.SysLoginRoleDao;
+import com.iamcenter.strategy.EncoderStrategy;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
 import com.javapai.framework.enums.ErrorCode;
@@ -38,6 +44,15 @@ public class SecurityBusiness {
 	
 	@Autowired
 	private SysLoginRoleDao sysLoginRoleDao;
+	
+	@Autowired
+	private AuthenticationManager authenticationManager;
+	
+	@Autowired
+	private EncoderStrategy encoderStrategy;
+	
+	@Autowired
+	private JwtUtil jwtUtil; 
 
 	/**
 	 * 检查当前登录名在某app产线上的可用性.<br>
@@ -151,7 +166,6 @@ public class SecurityBusiness {
 		logger.info("----------->正在创建用户({})登录信息!", loginName);
 		SysLogin entity = new SysLogin();
 		entity.setAppId(appId);
-//		entity.setLoginId(RandomUtils.nextLong(1, 100000));
 		entity.setLoginName(loginName);
 		entity.setLoginPwd(DigestUtils.md5Hex(loginPwd));
 		entity.setVersion(version);
@@ -208,7 +222,9 @@ public class SecurityBusiness {
 	 */
 	public long doRegister(SysLogin loginInfo, List<String> loginRole) {
 		logger.info("--->正在创建用户(appId={} loginName={})登录信息!", loginInfo.getAppId(), loginInfo.getLoginName());
-		// 新注册用户登录状态：INIT
+		// 注册用户密码加密
+		loginInfo.setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, loginInfo.getLoginPwd()));
+		// 注册用户登录状态：INIT
 		loginInfo.setLoginState(StatusEnum.ENABLE.name());
 		sysLoginRepository.save(loginInfo);
 		logger.info("--->当前登录账号(loginName={})已注册完成!", loginInfo.getLoginName());
@@ -246,18 +262,35 @@ public class SecurityBusiness {
 	}
 	
 	public RstResult<LoginVO> doLogin(SysLogin login) {
+		// 当前AppId是否可用
 		SysLogin entity = sysLoginRepository.findByAppIdAndLoginName(login.getAppId(), login.getLoginName());
 		if (null == entity) {
 			logger.warn("----当前应用【{}】的登录用户【{}】有误!", login.getAppId(), login.getLoginName());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
 		}
-		if (!entity.getLoginPwd().equals(DigestUtils.md5Hex(login.getLoginPwd()))) {
+//		if (!entity.getLoginPwd().equals(DigestUtils.md5Hex(login.getLoginPwd()))) {
+//			logger.warn("----当前应用【{}】的登录密码【{}】有误!", login.getAppId(), login.getLoginName());
+//			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
+//		}
+
+		/* 0、解决认证问题（手动编码进行认证 或 借助security框架认证 */
+		/*-----采用Security框架认证(开始）-------*/
+		String fullUserUserName = login.getAppId() + "#" + login.getLoginName();
+		UsernamePasswordAuthenticationToken upat = new UsernamePasswordAuthenticationToken(fullUserUserName, login.getLoginPwd());
+		try {
+			Authentication authentication = authenticationManager.authenticate(upat);
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+		} catch (BadCredentialsException bce) {
 			logger.warn("----当前应用【{}】的登录密码【{}】有误!", login.getAppId(), login.getLoginName());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
+		} catch (Exception e) {
+			System.out.println(e.getLocalizedMessage());
 		}
-
+		/*-----采用Security框架认证(结束）-------*/
+		
 		/* 1、更新记录token状态 */
-		String token = getToken(entity.getAppId(), entity.getLoginName(), entity.getLoginPwd());
+//		String token = getToken(entity.getAppId(), entity.getLoginName(), entity.getLoginPwd());
+		String token = getJWTToken(entity.getAppId(), String.valueOf(entity.getLoginId()), entity.getLoginName());
 		entity.setLoginToken(token);
 		entity.setLoginExpire(System.currentTimeMillis() + 36000L);
 		sysLoginRepository.save(entity);
@@ -355,26 +388,22 @@ public class SecurityBusiness {
 	// }
 	
 	/**
-	 * 生成登录Token.<br>
+	 * 生成JWT登录Token.<br>
 	 * 
 	 * @param appId     app标识.<br>
+	 * @param loginId   登录密码.<br>
 	 * @param loginName 登录名.<br>
-	 * @param password  登录密码.<br>
-	 * @return token 令牌.<br>
 	 * 
+	 * @return token 令牌.<br>
 	 */
-	private String getToken(String appId, String loginName, String password) {
-		StringBuffer sb = new StringBuffer();
-		sb.append(System.currentTimeMillis());
-		// sb.append(userId + productLine);
-		sb.append(appId);
-		sb.append(loginName);
-		// sb.append(dto.getPassword());
-		// sb.append(dto.getChannelNo());
-		sb.append(System.currentTimeMillis());
-		byte[] base64 = Base64.encodeBase64(sb.toString().getBytes());
-		logger.info("--->系统播报：用户【{}】登记成功！", loginName);
-		return DigestUtils.md5(base64).toString();
+	private String getJWTToken(String appId, String loginId, String loginName) {
+		// 构造 JWT Claims（把应用权限和用户权限合并）
+		Map<String, Object> claims = Map.of("appId", appId, "username", loginName);
+		// 用户角色（来自 UserDetails）
+//		claims.put("roles", auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
+		// 应用权限范围（来自 oauth_app 表）
+//		claims.put("scopes", Arrays.asList(app.getAllowedScopes().split(",")));
+		return jwtUtil.generateToken(loginId, claims);
 	}
-
+	
 }

@@ -44,12 +44,12 @@ public class SysLogin extends AbstractDomain implements Serializable {
 	 * 登录密码(建议使用md5加密后的密码串).<br>
 	 * 账号密码 transient可用来指定当前不想被系列化的成员对象
 	 */
-	@Column(name = "login_pwd", length = 50, nullable = false)
+	@Column(name = "login_pwd", length = 128, nullable = false)
 	private String loginPwd;
 	/**
-	 * 登录授权token
+	 * 登录授权token（为兼容jwt放宽长度）
 	 */
-	@Column(name = "login_token", length = 50)
+	@Column(name = "login_token", length = 255)
 	private String loginToken;
 
 	/**

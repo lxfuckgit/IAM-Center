@@ -9,3 +9,7 @@ logging:
   level:
     root: INFO              # 保持应用自身的INFO日志
     org.apache.dubbo: WARN  # 将Dubbo的日志级别设为WARN，屏蔽INFO及以下级别
+
+config:
+  auth:
+    ignoreUrls: /iam/pwdLogin.php,/iam/pwdRegister.php

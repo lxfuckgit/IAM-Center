@@ -13,6 +13,7 @@ import com.saasapi.contract.security.AuthContract;
 import com.saasapi.contract.security.dto.LogoutDTO;
 import com.saasapi.contract.security.dto.PwdLoginDTO;
 import com.saasapi.contract.security.dto.RegPwdDTO;
+import com.saasapi.contract.security.dto.RegSmsDTO;
 import com.saasapi.contract.security.dto.SmsCaptchaDTO;
 import com.saasapi.contract.security.vo.LoginVO;
 
@@ -42,8 +43,8 @@ public class AuthenticationController {
 		return authContract.register(param);
 	}
 
-	@RequestMapping(value = "/smsRegister.php")
-	public RstResult<String> smsRegister(@RequestBody RegPwdDTO param) {
+	@RequestMapping(value = "/auth/smsRegister.php")
+	public RstResult<String> smsRegister(@RequestBody RegSmsDTO param) {
 		return authContract.register(param);
 	}
 
@@ -52,11 +53,11 @@ public class AuthenticationController {
 		return authContract.userLogin(param);
 	}
 
-	@RequestMapping(value = "/logout.php")
+	@RequestMapping(value = "/auth/logout.php")
 	public RstResult<String> logout(@RequestParam String token, HttpServletRequest requst) {
 		if (StringUtils.isBlank(token)) {
 			// 第二优先级：取请求头里的token
-			token = requst.getHeader("token");
+			token = requst.getHeader("Authorization");
 		}
 		return authContract.logout(new LogoutDTO(token));
 	}

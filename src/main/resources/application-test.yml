@@ -31,3 +31,8 @@ dubbo:
   consumer:
     check: false
     lazy: true
+
+jwt:
+  secret: "jvbXZIyM8J5ZiVYsOxin6ezsbVQGF9jufjcDVpYToaY="  # 生成方式：openssl rand -base64 32
+  expiration: 3600000           # 1小时，单位毫秒
+  issuer: "www.iam-center.com"

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 
 import com.iamcenter.business.SecurityBusiness;
@@ -96,7 +97,7 @@ public final class AuthService implements AuthContract {
 		SysLogin entity = new SysLogin();
 		entity.setAppId(dto.getAppId());
 		entity.setLoginName(dto.getUsername());
-		entity.setLoginPwd(DigestUtils.md5Hex(dto.getPassword()));
+		entity.setLoginPwd(dto.getPassword());
 		entity.setVersion(dto.getVersion());
 		entity.setNickName(dto.getNickName());
 		Long loginId = securityBusiness.doRegister(entity, dto.getRoleList());
@@ -301,6 +302,12 @@ public final class AuthService implements AuthContract {
 	 */
 	@Override
 	public RstResult<String> logout(@Validated LogoutDTO dto) {
+		if (StringUtils.isBlank(dto.getToken())) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+		}
+		if (dto.getToken().startsWith("Bearer ")) {
+			dto.setToken(dto.getToken().substring(7));
+		}
 //		int result = userLoginBusiness.deleteUserSessionByCode(dto.getToken());
 //		if (result > 0) {
 //			return RstResultBuilder.buildResult();
@@ -309,11 +316,14 @@ public final class AuthService implements AuthContract {
 //		}
 
 		/* 1.validate token */
-		// if redis exsit,
-		// select userLogin,and update token is null
+		// if redis exsit, select userLogin,and update token is null
+		int r1 = sysLoginRepository.deleteByLoginToken(dto.getToken());
+		logger.info("--->[{}]delete token:{} ", r1, dto.getToken());
 
 		/* 2.clear session */
 //		sessionRepository.delete(dto.getToken());
+		SecurityContextHolder.clearContext();
+		logger.info("--->delete session:{} ", dto.getToken());
 
 		/* 3.clear redis */
 
