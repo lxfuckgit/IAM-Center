@@ -1,19 +1,19 @@
 package com.iamcenter.controller;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.javapai.framework.action.RstResult;
 import com.saasapi.contract.security.AuthContract;
+import com.saasapi.contract.security.dto.ChangePwdDTO;
 import com.saasapi.contract.security.dto.LogoutDTO;
 import com.saasapi.contract.security.dto.PwdLoginDTO;
 import com.saasapi.contract.security.dto.RegPwdDTO;
 import com.saasapi.contract.security.dto.RegSmsDTO;
+import com.saasapi.contract.security.dto.ResetPwdDTO;
 import com.saasapi.contract.security.dto.SmsCaptchaDTO;
 import com.saasapi.contract.security.vo.LoginVO;
 
@@ -54,12 +54,19 @@ public class AuthenticationController {
 	}
 
 	@RequestMapping(value = "/auth/logout.php")
-	public RstResult<String> logout(@RequestParam String token, HttpServletRequest requst) {
-		if (StringUtils.isBlank(token)) {
-			// 第二优先级：取请求头里的token
-			token = requst.getHeader("Authorization");
-		}
+	public RstResult<String> logout(HttpServletRequest requst) {
+		String token = requst.getHeader("Authorization");
 		return authContract.logout(new LogoutDTO(token));
+	}
+	
+	@RequestMapping(value = "/auth/resetPassword.php")
+	public RstResult<String> resetPassword(@RequestBody ResetPwdDTO dto) {
+		return authContract.resetPassword(dto);
+	}
+	
+	@RequestMapping(value = "/auth/changePassword.php")
+	public RstResult<String> changePassword(@RequestBody ChangePwdDTO dto) {
+		return authContract.changePassword(dto);
 	}
 
 }

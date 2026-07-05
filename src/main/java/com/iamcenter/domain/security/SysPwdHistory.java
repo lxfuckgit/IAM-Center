@@ -2,6 +2,8 @@ package com.iamcenter.domain.security;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -17,8 +19,9 @@ import com.javapai.framework.common.domain.AbstractDomain;
 @Table(name = "sys_pwd_history")
 public class SysPwdHistory extends AbstractDomain {
 	@Id
-	@Column(name = "id")
-	private long logId;
+	@Column(name = "id", length = 20)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 	/**
 	 * 
 	 */
@@ -27,15 +30,15 @@ public class SysPwdHistory extends AbstractDomain {
 	/**
 	 * 
 	 */
-	@Column(name = "password", length = 32, nullable = false)
+	@Column(name = "password", length = 128, nullable = false)
 	private String password;
 
-	public long getLogId() {
-		return logId;
+	public Long getId() {
+		return id;
 	}
 
-	public void setLogId(long logId) {
-		this.logId = logId;
+	public void setId(Long id) {
+		this.id = id;
 	}
 
 	public Long getLoginId() {

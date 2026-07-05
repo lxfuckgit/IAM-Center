@@ -16,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.constant.Constant;
@@ -313,6 +314,21 @@ public class SecurityBusiness {
 		// 查询登录用户关联角色
 		loginVO.setRoleList(sysLoginRoleDao.listLoginRoleCode(entity.getLoginId()));
 		return ResultBuilder.normalResult(loginVO);
+	}
+	
+	@Transactional
+	public void doLogout(String token) {
+		/* 1.validate token */
+		// if redis exsit, select userLogin,and update token is null
+		int r1 = sysLoginRepository.deleteByLoginToken(token);
+		logger.info("--->[{}]delete token:{} ", r1, token);
+
+		/* 2.clear session */
+//		sessionRepository.delete(dto.getToken());
+		SecurityContextHolder.clearContext();
+		logger.info("--->delete session:{} ", token);
+
+		/* 3.clear redis */
 	}
 
 	/**

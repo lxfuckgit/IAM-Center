@@ -16,9 +16,11 @@ import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysPwdHistory;
 import com.iamcenter.repository.PwdHistoryRepository;
 import com.iamcenter.repository.SysLoginRepository;
+import com.iamcenter.strategy.EncoderStrategy;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
 import com.javapai.framework.enums.ErrorCode;
+import com.javapai.framework.enums.StatusEnum;
 import com.saasapi.contract.security.AuthContract;
 import com.saasapi.contract.security.dto.ChangePwdDTO;
 import com.saasapi.contract.security.dto.ConnectorPLoginDTO;
@@ -34,7 +36,6 @@ import com.saasapi.contract.security.enums.SecurityECode;
 import com.saasapi.contract.security.vo.LoginVO;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -63,6 +64,9 @@ public final class AuthService implements AuthContract {
 //	private SessionRepository sessionRepository;
 	@Autowired
 	private PwdHistoryRepository pwdHistoryRepository;
+	
+	@Autowired
+	private EncoderStrategy encoderStrategy;
 
 	@Value("${is.sms.fake:1}")
 	private String isSmsFake = "1";// 考虑用loginNameFake和LoginPwdFake代替.
@@ -314,20 +318,7 @@ public final class AuthService implements AuthContract {
 //		} else {
 //			return RstResultBuilder.buildErrorResponse(ErrorCode.ERROR_LOGOUT);
 //		}
-
-		/* 1.validate token */
-		// if redis exsit, select userLogin,and update token is null
-		int r1 = sysLoginRepository.deleteByLoginToken(dto.getToken());
-		logger.info("--->[{}]delete token:{} ", r1, dto.getToken());
-
-		/* 2.clear session */
-//		sessionRepository.delete(dto.getToken());
-		SecurityContextHolder.clearContext();
-		logger.info("--->delete session:{} ", dto.getToken());
-
-		/* 3.clear redis */
-
-		/* 4.return result */
+		securityBusiness.doLogout(dto.getToken());
 		return ResultBuilder.normalResult();
 	}
 
@@ -339,63 +330,46 @@ public final class AuthService implements AuthContract {
 	 */
 	@Override
 	public RstResult<String> resetPassword(ResetPwdDTO dto) {
-		// 验证电话是否存在
-		if (StringUtils.isEmpty(String.valueOf(dto.getPhone()))) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_PHONE);
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
-		Long userId = null;
-
-		/* 1:验证密码规则 */
-		RstResult<String> rule = validatePasswordRule(dto.getPassword(), true);
-		if (!ResultBuilder.RESPONSE_OK.equals(rule.getMessage())) {
-			return ResultBuilder.buildResult(ErrorCode.PASSWORD_PATTERN);
+		if (StringUtils.isEmpty(dto.getLoginName())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_USERNAME);
 		}
-
-		// try {
-		// //* 2：提取用户信息 *//*
-		// Set<String> field = new HashSet<>();
-		// field.add("phone");
-		// //更具手机号查询用户数据
-		// List<Map<String, String>> userList =
-		// profileBusiness.getUserInfo(dto.getPhone(), field);
-		// if (userList == null) {
-		// EE.logEvent("Service", "userRegister");
-		// return
-		// ResponseResultBuilder.buildErrorResponse(CenterConstants.ERROR_CODE_DEFAULT,"用户标识无效,请核对!");
-		// } else {
-		// if (userList.size() > 1) {
-		// EE.logEvent("Service", "userRegister");
-		// return
-		// ResponseResultBuilder.buildErrorResponse(CenterConstants.ERROR_CODE_DEFAULT,"用户("+dto.getPhone()+")存在多条记录!");
-		// } else {
-		// Map<String, String> map = userList.get(0);
-		// userId = Long.valueOf(map.get("userId"));
-		// }
-		// }
-		// } catch (BizException e) {
-		// e.printStackTrace();
-		// }
-
-		/* 3:修改用户密码 */
-		Map<String, Object> commonFields = new HashMap<>();
-		commonFields.put("addChannel", "app");
-		commonFields.put("addProduct", "uzone");
-		commonFields.put("remoteIp", dto.getDeviceIp());
-		// commonFields.put("addVersion", dto.getAppVersion());
-		commonFields.put("addUser", "system");
-		boolean result = false;
-		// try {
-		// result = userAuthBusiness.updateUserPassword(userId,
-		// dto.getPassword(),commonFields);
-		// } catch (Exception e) {
-		// EE.logError("userBusiness#updateUserPassword", e);
-		// e.printStackTrace();
-		// }
-		if (result) {
-			return ResultBuilder.normalResult();
-		} else {
-			return ResultBuilder.buildResult("420000025", "找回密码服务异常，无法完成密码修改!");
+		if (StringUtils.isEmpty(dto.getNewPassword())) {
+			dto.setNewPassword(Constant.DEFAULT_PWD);
+			logger.info("--->系统未检测到新密码，将重置为默认密码！");
 		}
+		/* 验证密码规则（重置密码时不需要验证规则） */
+//		RstResult<String> rule = validatePasswordRule(dto.getPassword());
+//		if (!ResultBuilder.RESPONSE_OK.equals(rule.getMessage())) {
+//			return ResultBuilder.buildResult(ErrorCode.PASSWORD_PATTERN);
+//		}
+		
+		SysLogin login = sysLoginRepository.findByAppIdAndLoginName(dto.getAppId(), dto.getLoginName());
+		if (null == login) {
+			logger.warn("----当前应用【{}】的登录用户【{}】有误!", dto.getAppId(), dto.getLoginName());
+			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
+		}
+		
+		/* 1:修改用户密码 */
+		login.setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, dto.getNewPassword()));
+		sysLoginRepository.save(login);
+		logger.info("--->用户({})密码更新完成！", login.getLoginName());
+
+		/* 2：修改日志记录 */
+		SysPwdHistory his = new SysPwdHistory();
+		his.setAppId(login.getAppId());
+		his.setLoginId(login.getLoginId());
+		his.setPassword(login.getLoginPwd());
+		his.setVersion(login.getVersion());
+		his.setDeviceIp(dto.getDeviceIp());
+		pwdHistoryRepository.save(his);
+		logger.info("--->用户({})密码更新日志完成！", login.getLoginName());
+
+		/* 3：登录token失效 */
+		securityBusiness.doLogout(login.getLoginToken());
+		return ResultBuilder.normalResult();
 	}
 
 	/**
@@ -406,6 +380,8 @@ public final class AuthService implements AuthContract {
 	 */
 	@Override
 	public RstResult<String> changePassword(ChangePwdDTO dto) {
+		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+		dto.setLoginId(Long.valueOf(userId));
 		if (StringUtils.isEmpty(String.valueOf(dto.getLoginId()))) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_USERID);
 		}
@@ -417,7 +393,7 @@ public final class AuthService implements AuthContract {
 		}
 
 		/* 1:验证密码规则 */
-		RstResult<String> rule = validatePasswordRule(dto.getNewPasswd(), true);
+		RstResult<String> rule = validatePasswordRule(dto.getNewPasswd());
 		if (!ResultBuilder.RESPONSE_OK.equals(rule.getCode())) {
 			return ResultBuilder.buildResult(rule.getCode(), rule.getMessage());
 		}
@@ -425,30 +401,37 @@ public final class AuthService implements AuthContract {
 		/* 2：提取用户信息 */
 		Optional<SysLogin> login = sysLoginRepository.findById(dto.getLoginId());
 		if (login == null || !login.isPresent()) {
-			// EE.logEvent("Service", "userRegister");
+			return ResultBuilder.buildResult(SecurityECode.LOGINID_INVALID);
+		}
+		if (StatusEnum.DISABLE.name().equals(login.get().getLoginState())) {
+			// 禁用账户不可以修改密码
 			return ResultBuilder.buildResult(SecurityECode.LOGINID_INVALID);
 		}
 
 		/* 3:修改用户密码 */
-		login.get().setLoginPwd(dto.getNewPasswd());
+		login.get().setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, dto.getNewPasswd()));
 		sysLoginRepository.save(login.get());
+		logger.info("--->用户({})密码更新完成！", login.get().getLoginName());
 
-		/* 4：日志记录 */
+		/* 4：修改日志记录 */
 		SysPwdHistory his = new SysPwdHistory();
-		his.setLogId(dto.getLoginId());
+		his.setAppId(login.get().getAppId());
+		his.setLoginId(dto.getLoginId());
 		his.setPassword(dto.getNewPasswd());
-		his.setAppId(dto.getDeviceIp());
-//		his.setVersion();
+		his.setVersion(login.get().getVersion());
 		his.setDeviceIp(dto.getDeviceIp());
 		pwdHistoryRepository.save(his);
+		logger.info("--->用户({})密码更新日志完成！", login.get().getLoginName());
 
-		/* 5：token失效 */
-		Map<String, Object> commonFields = new HashMap<>();
-		commonFields.put("remoteIp", "192.168.1.1");
-		// commonFields.put("addChannel", dto.getRstSource());
-		commonFields.put("addProduct", "uzone");
-		// commonFields.put("addVersion", dto.getAppVersion());
-		commonFields.put("addUser", "system");
+		/* 5：登录token失效 */
+		securityBusiness.doLogout(login.get().getLoginToken());
+		
+//		Map<String, Object> commonFields = new HashMap<>();
+//		commonFields.put("remoteIp", "192.168.1.1");
+//		 commonFields.put("addChannel", dto.getRstSource());
+//		commonFields.put("addProduct", "uzone");
+//		 commonFields.put("addVersion", dto.getAppVersion());
+//		commonFields.put("addUser", "system");
 		boolean result = true;
 		if (result) {
 			return ResultBuilder.normalResult();
@@ -501,24 +484,17 @@ public final class AuthService implements AuthContract {
 	 * @param encrypt
 	 * @return
 	 */
-	private RstResult<String> validatePasswordRule(String password, boolean encrypt) {
+	private RstResult<String> validatePasswordRule(String password) {
 		if (StringUtils.isEmpty(password)) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
-
-		if (encrypt) {
-			if (password.length() != 32) {
-				return ResultBuilder.buildResult(ErrorCode.PASSWORD_PATTERN);
-			}
-		} else {
-			if (password.length() < 6) {
-				return ResultBuilder.buildResult(ErrorCode.PASSWORD_LENGH);
-			}
-			Pattern pattern = Pattern.compile("^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{6,10}$");
-			Matcher matcher = pattern.matcher(password);
-			if (!matcher.matches()) {
-				return ResultBuilder.buildResult(ErrorCode.PASSWORD_PATTERN);
-			}
+		if (password.length() < 6) {
+			return ResultBuilder.buildResult(ErrorCode.PASSWORD_LENGH);
+		}
+		Pattern pattern = Pattern.compile("^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{6,15}$");
+		Matcher matcher = pattern.matcher(password);
+		if (!matcher.matches()) {
+			return ResultBuilder.buildResult(ErrorCode.PASSWORD_PATTERN, "密码格式要求(6到15位的数字+字母组合)不达标!");
 		}
 		return ResultBuilder.normalResult();
 	}
