@@ -107,6 +107,11 @@
 			<artifactId>saasapi-contract-security</artifactId>
 			<version>v1.0.1</version>
 		</dependency>
+		<dependency>
+			<groupId>com.saasapi.contract</groupId>
+			<artifactId>saasapi-contract-party</artifactId>
+			<version>v1.0.1</version>
+		</dependency>
         <dependency>
 			<groupId>com.javapai.framework</groupId>
 			<artifactId>framework-common</artifactId>

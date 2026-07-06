@@ -30,7 +30,7 @@ public class PartyGroup extends Party implements Serializable {
 	/**
 	 * 团体名称
 	 */
-	@Column(name = "groupName", length = 60)
+	@Column(name = "groupName", length = 60, nullable = false)
 	private String groupName;
 
 	/**
@@ -50,7 +50,7 @@ public class PartyGroup extends Party implements Serializable {
 	 */
 	@Column(name = "email", length = 30)
 	private String email;
-	
+
 	/**
 	 * 座机
 	 */
@@ -75,7 +75,7 @@ public class PartyGroup extends Party implements Serializable {
 	 */
 	@Column(name = "licenseImage", length = 60)
 	private String licenseImage;
-	
+
 	/**
 	 * 组织机构编号
 	 */
@@ -114,14 +114,6 @@ public class PartyGroup extends Party implements Serializable {
 	 */
 	@Column(name = "website", length = 50)
 	private String website;
-
-//	public String getPartyId() {
-//		return partyId;
-//	}
-//
-//	public void setPartyId(String partyId) {
-//		this.partyId = partyId;
-//	}
 
 	public String getGroupName() {
 		return groupName;
@@ -235,4 +227,12 @@ public class PartyGroup extends Party implements Serializable {
 		this.registrationImage = registrationImage;
 	}
 
+	public String getWebsite() {
+		return website;
+	}
+
+	public void setWebsite(String website) {
+		this.website = website;
+	}
+	
 }

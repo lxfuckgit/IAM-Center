@@ -27,9 +27,6 @@ import jakarta.persistence.Table;
 @Table(name = "HY100")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Party extends TopBaseDomain implements Serializable {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	/**
@@ -47,16 +44,10 @@ public class Party extends TopBaseDomain implements Serializable {
 	private String externalId;
 
 	/**
-	 * 登录号/userLoginId
+	 * 应用标识
 	 */
-	// @Column(name = "userName", length = 15)
-	// private String userName;
-
-	/**
-	 * 密码
-	 */
-	// @Column(name = "password", length = 32)
-	// private String password;
+	@Column(name = "app_id", length = 15)
+	private String appId;
 
 	/**
 	 * 用户类型<br>
@@ -65,6 +56,14 @@ public class Party extends TopBaseDomain implements Serializable {
 	@Column(name = "partyTypeId", length = 32)
 	private String partyTypeId;
 	// private PartyType partyTypeId;
+	
+	/**
+	 * 主要角色(当前角色)<br>
+	 * 取值参考RoleEnum
+	 */
+	@Column(name = "roleTypeId", length = 32)
+	private String roleTypeId;
+	// private String primaryRoleTypId;
 
 	/**
 	 * 用户当前状态<br>
@@ -87,13 +86,6 @@ public class Party extends TopBaseDomain implements Serializable {
 	@Column(name = "invate_code", unique = true, length = 16)
 	private String invateCode;
 
-	/**
-	 * 主要角色(当前角色).<br>
-	 * 取值参考RoleEnum
-	 */
-	@Column(name = "roleTypeId", length = 32)
-	private String roleTypeId;
-	// private String primaryRoleTypId;
 	/**
 	 * 最后操作人
 	 */
@@ -126,6 +118,14 @@ public class Party extends TopBaseDomain implements Serializable {
 
 	public void setExternalId(String externalId) {
 		this.externalId = externalId;
+	}
+
+	public String getAppId() {
+		return appId;
+	}
+
+	public void setAppId(String appId) {
+		this.appId = appId;
 	}
 
 	public String getPartyTypeId() {
