@@ -14,9 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.iamcenter.domain.party.PartyGroup;
-import com.iamcenter.domain.party.PartyPerson;
 import com.iamcenter.repository.party.PartyGroupRepository;
-import com.iamcenter.repository.party.PartyPersonRepository;
 import com.iamcenter.service.PartyService;
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.ResultBuilder;
@@ -25,9 +23,13 @@ import com.saasapi.contract.party.dto.CompanyListDTO;
 import com.saasapi.contract.party.dto.DepartmentDTO;
 import com.saasapi.contract.party.dto.DepartmentListDTO;
 import com.saasapi.contract.party.dto.PartyGroupDTO;
+import com.saasapi.contract.party.dto.PersonCreateDTO;
+import com.saasapi.contract.party.dto.PersonListDTO;
+import com.saasapi.contract.party.dto.PersonUpdateDTO;
 import com.saasapi.contract.party.enums.RoleTypeEnum;
 import com.saasapi.contract.party.vo.CompanyVO;
 import com.saasapi.contract.party.vo.DepartmentVO;
+import com.saasapi.contract.party.vo.PersonVO;
 
 @RestController
 @RequestMapping("/organization")
@@ -36,9 +38,6 @@ public class OrganizationController {
 	@Autowired
 	private PartyGroupRepository partyGroupRepository;
 
-	@Autowired
-	private PartyPersonRepository partyPersonRepository;
-	
 	@Autowired
 	private PartyService partyService;
 	
@@ -152,78 +151,33 @@ public class OrganizationController {
 	}
 
 	@PostMapping("/createPerson")
-	public RstResult<String> createPerson(@RequestBody PartyPerson person) {
-		if (person.getCode() == null || person.getCode().isEmpty()) {
-			return ResultBuilder.buildResult("40000001", "用户编号不能为空");
-		}
-		if (person.getPersonName() == null || person.getPersonName().isEmpty()) {
-			return ResultBuilder.buildResult("40000001", "用户姓名不能为空");
-		}
-		PartyPerson saved = partyPersonRepository.save(person);
-		return ResultBuilder.normalResult(saved.getPartyId());
+	public RstResult<String> createPerson(@RequestBody PersonCreateDTO dto) {
+		return partyService.createPerson(dto);
 	}
 
 	@GetMapping("/getPerson/{partyId}")
-	public RstResult<PartyPerson> getPerson(@PathVariable String partyId) {
-		Optional<PartyPerson> optional = partyPersonRepository.findById(partyId);
-		if (optional.isPresent()) {
-			return ResultBuilder.normalResult(optional.get());
-		} else {
-			return ResultBuilder.buildResult("40000002", "个人不存在");
-		}
+	public RstResult<PersonVO> getPerson(@PathVariable String partyId) {
+		return partyService.getPersonById(partyId);
 	}
 
-	@GetMapping("/listPerson")
-	public RstResult<List<PartyPerson>> listPerson() {
-		return ResultBuilder.normalResult(partyPersonRepository.findAll());
+	@RequestMapping("/listPerson")
+	public PageResult<PersonVO> listPerson(@RequestBody PersonListDTO dto) {
+		return partyService.listPerson(dto);
 	}
 
 	@PutMapping("/updatePerson")
-	public RstResult<String> updatePerson(@RequestBody PartyPerson person) {
-		if (person.getPartyId() == null || person.getPartyId().isEmpty()) {
-			return ResultBuilder.buildResult("40000003", "个人标识不能为空");
-		}
-		Optional<PartyPerson> optional = partyPersonRepository.findById(person.getPartyId());
-		if (!optional.isPresent()) {
-			return ResultBuilder.buildResult("40000002", "个人不存在");
-		}
-		PartyPerson existing = optional.get();
-		if (person.getCode() != null) {
-			existing.setCode(person.getCode());
-		}
-		if (person.getPersonName() != null) {
-			existing.setPersonName(person.getPersonName());
-		}
-		if (person.getFirstName() != null) {
-			existing.setFirstName(person.getFirstName());
-		}
-		if (person.getLastName() != null) {
-			existing.setLastName(person.getLastName());
-		}
-		if (person.getSex() != '\0') {
-			existing.setSex(person.getSex());
-		}
-		if (person.getBirthday() != null) {
-			existing.setBirthday(person.getBirthday());
-		}
-		if (person.getIconId() != null) {
-			existing.setIconId(person.getIconId());
-		}
-		if (person.getIdCard() != null) {
-			existing.setIdCard(person.getIdCard());
-		}
-		partyPersonRepository.save(existing);
-		return ResultBuilder.normalResult();
+	public RstResult<String> updatePerson(@RequestBody PersonUpdateDTO dto) {
+		return partyService.updatePerson(dto);
 	}
 
-	@DeleteMapping("/deletePerson/{partyId}")
-	public RstResult<String> deletePerson(@PathVariable String partyId) {
-		if (!partyPersonRepository.existsById(partyId)) {
-			return ResultBuilder.buildResult("40000002", "个人不存在");
-		}
-		partyPersonRepository.deleteById(partyId);
-		return ResultBuilder.normalResult();
-	}
+//	@DeleteMapping("/deletePerson/{partyId}")
+//	public RstResult<String> deletePerson(@PathVariable String partyId) {
+//		if (!partyPersonRepository.existsById(partyId)) {
+//			return ResultBuilder.buildResult("40000002", "个人不存在");
+//		}
+//		partyPersonRepository.deleteById(partyId);
+//		return ResultBuilder.normalResult();
+//	}
 
 //	@PostMapping("/addRelation")
 //	public RstResult<String> addRelation(@RequestBody com.saasapi.contract.party.dto.RelationDTO dto) {

@@ -242,7 +242,7 @@ public class SecurityBusiness {
 		/* 2、关联角色设置 */
 		if (null != loginRole) {
 			loginRole.forEach(roleId -> {
-				sysLoginRoleDao.save(new SysLoginRole(loginInfo.getLoginId(), roleId));
+				sysLoginRoleDao.save(new SysLoginRole(loginInfo.getLoginId(), Long.valueOf(roleId)));
 			});
 			logger.info("--->当前登录账户（{}）的角色分配完毕！", loginInfo.getLoginId());
 		}

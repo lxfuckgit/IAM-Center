@@ -35,6 +35,7 @@ import com.saasapi.contract.party.dto.DepartmentListDTO;
 import com.saasapi.contract.party.dto.PartyGroupDTO;
 import com.saasapi.contract.party.dto.PersonCreateDTO;
 import com.saasapi.contract.party.dto.PersonListDTO;
+import com.saasapi.contract.party.dto.PersonUpdateDTO;
 import com.saasapi.contract.party.enums.PartyRelationType;
 import com.saasapi.contract.party.enums.PartyType;
 import com.saasapi.contract.party.enums.RoleTypeEnum;
@@ -90,6 +91,12 @@ public class PartyService implements PartyContract {
 
 	@Override
 	public RstResult<String> createPerson(PersonCreateDTO dto) {
+//		if (dto.getCode() == null || dto.getCode().isEmpty()) {
+//			return ResultBuilder.buildResult("40000001", "用户编号不能为空");
+//		}
+		if (dto.getName() == null || dto.getName().isEmpty()) {
+			return ResultBuilder.buildResult("40000001", "用户姓名不能为空");
+		}
 		if (null != getPersonBySfz(dto.getIdcard())) {
 			logger.error("--->身份证号[{}]重复!.", dto.getIdcard());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_USER_IDCARD_INVALID);
@@ -135,36 +142,71 @@ public class PartyService implements PartyContract {
 	}
 
 	@Override
-	public boolean updatePerson(String partyId, Map<String, String> args) {
-		if (StringUtils.isEmpty(String.valueOf(partyId))) {
-//			log.info(ErrorCode.PARAMS_USERID);
-			return false;
+	@Transactional
+	public RstResult<String> updatePerson(PersonUpdateDTO dto) {
+		if (StringUtils.isBlank(dto.getPersonId())) {
+			return ResultBuilder.buildResult("40000003", "个人标识不能为空");
 		}
-
-		// if update baseinfo
+		Optional<PartyPerson> optional = partyPersonDao.findById(dto.getPersonId());
+		if (!optional.isPresent()) {
+			return ResultBuilder.buildResult("40000002", "个人不存在");
+		}
+		
+//		PartyPerson existing = optional.get();
+//		if (person.getCode() != null) {
+//			existing.setCode(person.getCode());
+//		}
+//		if (person.getPersonName() != null) {
+//			existing.setPersonName(person.getPersonName());
+//		}
+//		if (person.getFirstName() != null) {
+//			existing.setFirstName(person.getFirstName());
+//		}
+//		if (person.getLastName() != null) {
+//			existing.setLastName(person.getLastName());
+//		}
+//		if (person.getSex() != '\0') {
+//			existing.setSex(person.getSex());
+//		}
+//		if (person.getBirthday() != null) {
+//			existing.setBirthday(person.getBirthday());
+//		}
+//		if (person.getIconId() != null) {
+//			existing.setIconId(person.getIconId());
+//		}
+//		if (person.getIdCard() != null) {
+//			existing.setIdCard(person.getIdCard());
+//		}
+//		partyPersonRepository.save(existing);
+		
+		/* 1、update base info */
 		// personBusiness.updatePerson(xxx);
 
-		// if update contact
+		/*2、update contact info*/
 		// contactBusiness.updateContact(xxx);
 
-		return false;
+		return ResultBuilder.normalResult();
 	}
 
 	@Override
-	public PersonVO getPersonById(String partyId) {
-		PersonVO vo = new PersonVO();
-
-		List<String> set = Arrays.asList("phone", "code", "realname", "realnameAllStatus");
-		Map<String, String> data = getPerson(partyId, new HashSet<>(set));
-		if (data != null) {
+	public RstResult<PersonVO> getPersonById(String partyId) {
+		Optional<PartyPerson> optional = partyPersonDao.findById(partyId);
+		if (!optional.isPresent()) {	
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		
+//		List<String> set = Arrays.asList("phone", "code", "realname", "realnameAllStatus");
+//		Map<String, String> data = getPerson(partyId, new HashSet<>(set));
+//		if (data != null) {
 //			vo.setUserId(Long.valueOf(data.get("userId")));
 //			vo.setUsername(data.get("phone"));
 //			vo.setRealname(data.get("realname"));
 //			vo.setRealnameStatus(data.get("realnameAllStatus"));
-			return vo;
-		} else {
-			return null;
-		}
+//			return vo;
+//		}
+		PersonVO vo = new PersonVO();
+		vo.setRealname(optional.get().getPersonName());
+		return ResultBuilder.normalResult(vo);
 	}
 
 	@Override
@@ -259,7 +301,6 @@ public class PartyService implements PartyContract {
 
 	@Override
 	public Map<String, String> getPerson(String partyId, Set<String> filed) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

@@ -23,13 +23,13 @@ public final class SysLoginRole extends TopBaseDomain {
 
 	@Id
 	@Column(name = "role_id", length = 32)
-	private String roleId;
+	private Long roleId;
 
 	public SysLoginRole() {
 		super();
 	}
 
-	public SysLoginRole(Long loginId, String roleId) {
+	public SysLoginRole(Long loginId, Long roleId) {
 		super();
 		this.loginId = loginId;
 		this.roleId = roleId;
@@ -43,11 +43,11 @@ public final class SysLoginRole extends TopBaseDomain {
 		this.loginId = loginId;
 	}
 
-	public String getRoleId() {
+	public Long getRoleId() {
 		return roleId;
 	}
 
-	public void setRoleId(String roleId) {
+	public void setRoleId(Long roleId) {
 		this.roleId = roleId;
 	}
 
@@ -57,7 +57,7 @@ public final class SysLoginRole extends TopBaseDomain {
 @Embeddable
 class SysLRolePK implements Serializable {
 	private Long loginId;
-	private String roleId;
+	private Long roleId;
 
 	public Long getLoginId() {
 		return loginId;
@@ -67,11 +67,11 @@ class SysLRolePK implements Serializable {
 		this.loginId = loginId;
 	}
 
-	public String getRoleId() {
+	public Long getRoleId() {
 		return roleId;
 	}
 
-	public void setRoleId(String roleId) {
+	public void setRoleId(Long roleId) {
 		this.roleId = roleId;
 	}
 }

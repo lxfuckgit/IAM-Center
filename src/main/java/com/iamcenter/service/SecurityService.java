@@ -14,7 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.iamcenter.business.RBACBusiness;
 import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
@@ -24,13 +26,18 @@ import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.SysLoginRoleDao;
 import com.iamcenter.repository.SysResourceDao;
 import com.iamcenter.repository.SysRoleRepository;
+import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
 import com.javapai.framework.enums.ErrorCode;
+import com.javapai.framework.utils.UtilDateTime;
 import com.saasapi.contract.security.SecurityContract;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
 import com.saasapi.contract.security.dto.MenuDTO;
 import com.saasapi.contract.security.dto.RoleDTO;
+import com.saasapi.contract.security.dto.RoleDeleteDTO;
+import com.saasapi.contract.security.dto.RoleListDTO;
+import com.saasapi.contract.security.dto.RoleUpdateDTO;
 import com.saasapi.contract.security.enums.ResEnum;
 import com.saasapi.contract.security.enums.SecurityECode;
 import com.saasapi.contract.security.vo.LoginRoleVO;
@@ -64,6 +71,9 @@ public class SecurityService implements SecurityContract {
 	
 	@Autowired
 	private SysLoginRoleDao loginRoleRepository;
+	
+	@Autowired
+	RBACBusiness rbacBusiness;
 	
 	@Autowired
 	protected JdbcTemplate jdbcTemplate;
@@ -206,14 +216,60 @@ public class SecurityService implements SecurityContract {
 		roleRepository.save(entity);
 		return ResultBuilder.normalResult();
 	}
+	
+	@Override
+	public RstResult<String> deleteRole(RoleDeleteDTO dto) {
+		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+		if(StringUtils.isEmpty(userId)) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+		}
+		Optional<SysRole> optional = roleRepository.findById(dto.getRoleId());
+		if (!optional.isPresent() || !optional.get().getCreatorId().equals(userId)) {
+			return ResultBuilder.buildResult("40000002", "当前角色个人不存在!");
+		}
+		List<SysLoginRole> roleList = loginRoleRepository.findByRoleId(dto.getRoleId());
+		if (null != roleList && roleList.size() > 0) {
+			return ResultBuilder.buildResult("40000002", "当前角色存在引用关系无法删除!");
+		}
+		/* 删除角色 */
+		roleRepository.delete(optional.get());
+		logger.info("--->[{}]角色信息已删除！", dto.getRoleId());
+		return ResultBuilder.normalResult();
+	}
+	
+	@Override
+	public RstResult<String> updateRole(RoleUpdateDTO dto) {
+		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+		if(StringUtils.isEmpty(userId)) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+		}
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		Optional<SysRole> optional = roleRepository.findById(dto.getRoleId());
+		if (!optional.isPresent() || !optional.get().getAppId().equals(dto.getAppId())) {
+			return ResultBuilder.buildResult("40000002", "当前角色信息不存在!");
+		}
+		/* 修改角色 */
+		if (StringUtils.isNotBlank(dto.getRoleName())) {
+			optional.get().setName(dto.getRoleName());
+		}
+		if (StringUtils.isNotBlank(dto.getRoleRemark())) {
+			optional.get().setRemark(dto.getRoleRemark());
+		}
+		optional.get().setUpdateId(userId);
+		optional.get().setUpdateTime(UtilDateTime.currentTimestamp());
+		roleRepository.save(optional.get());
+		logger.info("--->[{}]角色信息已更新！", dto.getRoleId());
+		return ResultBuilder.normalResult();
+	}
 
 	@Override
-	public RstResult<List<RoleVO>> listRole() {
-		return ResultBuilder.normalResult(roleRepository.findAll().stream().map(mapper -> {
-			RoleVO vo = new RoleVO();
-			BeanUtils.copyProperties(mapper, vo);
-			return vo;
-		}).collect(Collectors.toList()));
+	public PageResult<RoleVO> listRole(RoleListDTO dto) {
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+		}
+		return rbacBusiness.listRole(dto);
 	}
 	
 //	/**
@@ -337,43 +393,59 @@ public class SecurityService implements SecurityContract {
 
 	@Override
 	public RstResult<Boolean> addLoginRole(LoginRoleDTO dto) {
-		return addLoginRole(dto.getLoginId(), dto.getRoleId());
+		return addLoginRole(dto.getAppId(), dto.getLoginId(), dto.getRoleId());
 	}
 	
 	@Override
-	public RstResult<Boolean> addLoginRole(Long loginId, String roleId) {
+	public RstResult<Boolean> addLoginRole(String appId, Long loginId, Long roleId) {
+		if (StringUtils.isEmpty(appId)) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
 		Optional<SysRole> roleOptional = roleRepository.findById(roleId);
-		if (!roleOptional.isPresent()) {
+		if (!roleOptional.isPresent() || !roleOptional.get().getAppId().equals(appId)) {
 			return ResultBuilder.buildResult(SecurityECode.ROLE_INVALID);
 		}
-		
 		Optional<SysLogin> loginOptional = loginRepository.findById(loginId);
-		if(!loginOptional.isPresent()) {
+		if (!loginOptional.isPresent() || !loginOptional.get().getAppId().equals(appId)) {
 			return ResultBuilder.buildResult(SecurityECode.USERID_INVALID);
 		}
-
-		SysLoginRole lRole = new SysLoginRole(loginId, roleId);
-		loginRoleRepository.save(lRole);
+		
+		loginRoleRepository.save(new SysLoginRole(loginId, roleId));
+		logger.info("--->用户[{}]添加角色[{}]完成！", loginOptional.get().getLoginName(), roleOptional.get().getName());
 		return ResultBuilder.normalResult();
 	}
 	
 	@Override
-	public RstResult<Boolean> addLoginRole(String loginName, String roleId) {
+	public RstResult<Boolean> addLoginRole(String loginName, Long roleId) {
 		return null;
 	}
 	
 	@Override
 	public RstResult<Boolean> removeLoginRole(LoginRoleDTO dto) {
-		return removeLoginRole(dto.getLoginId(), dto.getRoleId());
+		return removeLoginRole(dto.getAppId(), dto.getLoginId(), dto.getRoleId());
 	}
 	
 	@Override
-	public RstResult<Boolean> removeLoginRole(Long loginId, String roleId) {
-		return ResultBuilder.normalResult(loginRoleRepository.deleteLoginRole(loginId, roleId));
+	@Transactional
+	public RstResult<Boolean> removeLoginRole(String appId, Long loginId, Long roleId) {
+		if (StringUtils.isEmpty(appId)) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		Optional<SysRole> roleOptional = roleRepository.findById(roleId);
+		if (!roleOptional.isPresent() || !roleOptional.get().getAppId().equals(appId)) {
+			return ResultBuilder.buildResult(SecurityECode.ROLE_INVALID);
+		}
+		Optional<SysLogin> loginOptional = loginRepository.findById(loginId);
+		if (!loginOptional.isPresent() || !loginOptional.get().getAppId().equals(appId)) {
+			return ResultBuilder.buildResult(SecurityECode.USERID_INVALID);
+		}
+		loginRoleRepository.deleteByLoginIdAndRoleId(loginId, roleId);
+		logger.info("--->用户[{}]移除角色[{}]完成！", loginId, roleId);
+		return ResultBuilder.normalResult();
 	}
 
 	@Override
-	public RstResult<Boolean> addRolePrivilege(String roleId, String privilegeId) {
+	public RstResult<Boolean> addRolePrivilege(Long roleId, String privilegeId) {
 		Optional<SysRole> roleOptional = roleRepository.findById(roleId);
 		Optional<SysResource> resourceOptional = resourceDao.findById(privilegeId);
 		if(roleOptional.isPresent() && resourceOptional.isPresent()) {
@@ -386,8 +458,8 @@ public class SecurityService implements SecurityContract {
 	}
 
 	@Override
-	public RstResult<Boolean> removeRolePrivilege(String roleId, String privilegeId) {
-		Optional<SysRole> roleOptional = roleRepository.findById(roleId);
+	public RstResult<Boolean> removeRolePrivilege(Long roleId, String privilegeId) {
+		Optional<SysRole> roleOptional = roleRepository.findById(Long.valueOf(roleId));
 		Optional<SysResource> resourceOptional = resourceDao.findById(privilegeId);
 		if (roleOptional.isPresent() && resourceOptional.isPresent()) {
 			roleOptional.get().getResources().remove(resourceOptional.get());
