@@ -9,7 +9,17 @@ logging:
   level:
     root: INFO              # 保持应用自身的INFO日志
     org.apache.dubbo: WARN  # 将Dubbo的日志级别设为WARN，屏蔽INFO及以下级别
+    org.springframework.web: INFO
+    org.springframework.web.servlet: INFO
+    org.springframework.security: INFO
+    org.springframework.security.web: INFO
+    org.springframework.security.access: INFO
+    org.springframework.security.authentication: INFO
+    org.springframework.security.authorization: INFO
+    org.hibernate.SQL: OFF            # 关闭SQL 语句
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF  # 关闭SQL参数值
+    org.hibernate.type.descriptor.sql.BasicExtractor: OFF  # 关闭SQL结果值
 
 config:
   auth:
-    ignoreUrls: /iam/pwdLogin.php,/iam/pwdRegister.php
+    ignoreUrls: /iam/pwdLogin.php,/iam/pwdRegister.php,/iam/auth/logout.php
