@@ -12,7 +12,7 @@ import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
 import com.saasapi.contract.security.SecurityContract;
-import com.saasapi.contract.security.dto.AddRolePrivilegeDTO;
+import com.saasapi.contract.security.dto.RolePrivilegeUpdateDTO;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
 import com.saasapi.contract.security.dto.ResourceCreateDTO;
 import com.saasapi.contract.security.dto.ResourceDeleteDTO;
@@ -93,14 +93,14 @@ public class AuthorizationController {
 //		return RstResultBuilder.buildResult(ss.listPrivilege());
 //	}
 	
-	@PostMapping("addRolePrivilege.php")
-	public RstResult<Boolean> addRolePrivilege(@RequestBody AddRolePrivilegeDTO dto) {
-		return securityService.addRolePrivilege(dto.getRoleId(), dto.getPrivilegeId());
+	@PostMapping("grantRolePrivilege.php")
+	public RstResult<Boolean> grantRolePrivilege(@RequestBody RolePrivilegeUpdateDTO dto) {
+		return securityService.grantRolePrivilege(dto.getAppId(), dto.getRoleId(), dto.getPrivilegeIdList());
 	}
-	
-	@PostMapping("removeRolePrivilege.php")
-	public RstResult<Boolean> removeRolePrivilege(@RequestBody AddRolePrivilegeDTO dto) {
-		return securityService.removeRolePrivilege(dto.getRoleId(), dto.getPrivilegeId());
+
+	@PostMapping("revokeRolePrivilege.php")
+	public RstResult<Boolean> revokeRolePrivilege(@RequestBody RolePrivilegeUpdateDTO dto) {
+		return securityService.revokeRolePrivilege(dto.getAppId(), dto.getRoleId(), dto.getPrivilegeIdList());
 	}
 	
 	@RequestMapping("listLogin.php")

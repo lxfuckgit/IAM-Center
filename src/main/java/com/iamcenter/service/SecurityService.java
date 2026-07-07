@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
@@ -477,47 +476,63 @@ public class SecurityService implements SecurityContract {
 	}
 
 	@Override
-	public RstResult<Boolean> addRolePrivilege(Long roleId, String privilegeId) {
+	@Transactional
+	public RstResult<Boolean> grantRolePrivilege(String appId, Long roleId, List<String> privilegeList) {
+		if (null == privilegeList || privilegeList.size() == 0) {
+			logger.warn("--->当前权限列表参数缺失，结束操作！");
+			return ResultBuilder.normalResult();
+		}
 		Optional<SysRole> roleOptional = roleRepository.findById(roleId);
-		Optional<SysResource> resourceOptional = resourceDao.findById(privilegeId);
-		if(roleOptional.isPresent() && resourceOptional.isPresent()) {
-			roleOptional.get().getResources().add(resourceOptional.get());
-			roleRepository.save(roleOptional.get());
-			return ResultBuilder.normalResult();
-		} else {
-			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_CREATE);
+		if (!roleOptional.isPresent() || !roleOptional.get().getAppId().equals(appId)) {
+			return ResultBuilder.buildResult(SecurityECode.ROLE_INVALID);
 		}
+		// 添加权限
+		List<SysResource> resourceList = new ArrayList<SysResource>();
+		privilegeList.forEach(action -> {
+			resourceList.add(resourceDao.getReferenceById(action));
+		});
+		roleOptional.get().getResources().addAll(resourceList);
+		roleRepository.save(roleOptional.get());
+		return ResultBuilder.normalResult();
 	}
 
 	@Override
-	public RstResult<Boolean> removeRolePrivilege(Long roleId, String privilegeId) {
+	@Transactional
+	public RstResult<Boolean> revokeRolePrivilege(String appId, Long roleId, List<String> privilegeList) {
+		if(null ==privilegeList || privilegeList.size()==0 ) {
+			logger.warn("--->当前权限列表参数缺失，结束操作！");
+			return ResultBuilder.normalResult();
+		}
 		Optional<SysRole> roleOptional = roleRepository.findById(Long.valueOf(roleId));
-		Optional<SysResource> resourceOptional = resourceDao.findById(privilegeId);
-		if (roleOptional.isPresent() && resourceOptional.isPresent()) {
-			roleOptional.get().getResources().remove(resourceOptional.get());
-			roleRepository.save(roleOptional.get());
-			return ResultBuilder.normalResult();
-		} else {
-			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE);
+		if (!roleOptional.isPresent() || !roleOptional.get().getAppId().equals(appId)) {
+			return ResultBuilder.buildResult(SecurityECode.ROLE_INVALID);
 		}
+		// 删除权限
+		List<SysResource> resourceList = new ArrayList<SysResource>();
+		privilegeList.forEach(action -> {
+			resourceList.add(resourceDao.getReferenceById(action));
+		});
+		roleOptional.get().getResources().removeAll(resourceList);
+		roleRepository.save(roleOptional.get());
+		return ResultBuilder.normalResult();
 	}
 
 	@Override
-	public RstResult<List<PrivilegeVO>> listRolePrivilege(String roleId) {
-		return ResultBuilder.normalResult(selectPrvilegeByRoleId(roleId));
+	public RstResult<List<PrivilegeVO>> listRolePrivilege(String appId, String roleId) {
+		return ResultBuilder.normalResult(rbacBusiness.listRoleResource(appId, Long.valueOf(roleId)));
 	}
 
 	@Override
 	public RstResult<List<PrivilegeVO>> listLoginPrivilege(Long loginId) {
 		List<PrivilegeVO> list = new ArrayList<PrivilegeVO>();
 		listLoginRole(loginId).forEach(action -> {
-			list.addAll(selectPrvilegeByRoleId(action.getRoleId()));
+			list.addAll(rbacBusiness.listRoleResource(Long.valueOf(action.getRoleId())));
 		});
 		return ResultBuilder.normalResult(list);
 	}
 
 	@Override
-	public RstResult<List<PrivilegeVO>> listLoginPrivilege(String loginName) {
+	public RstResult<List<PrivilegeVO>> listLoginPrivilege(String appId,String loginName) {
 		List<PrivilegeVO> list = new ArrayList<PrivilegeVO>();
 		listLoginRole(loginName).forEach(action -> {
 			//list.addAll(selectPrvilegeByRoleId(action.getRoleId()));
@@ -526,9 +541,4 @@ public class SecurityService implements SecurityContract {
 		return ResultBuilder.normalResult(list);
 	}
 	
-	private List<PrivilegeVO> selectPrvilegeByRoleId(String roleId) {
-		String sql = "select b.code,b.name from sys_role_privilege a left join sys_resource b on a.id=b.id where a.role_id=?";
-		return jdbcTemplate.query(sql, new String[] { roleId }, new BeanPropertyRowMapper<PrivilegeVO>(PrivilegeVO.class));
-	}
-
 }

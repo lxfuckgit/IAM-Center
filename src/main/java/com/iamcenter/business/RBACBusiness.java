@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.stereotype.Component;
 
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.common.service.AbstractBizService;
 import com.saasapi.contract.security.dto.ResourceListDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
+import com.saasapi.contract.security.vo.PrivilegeVO;
 import com.saasapi.contract.security.vo.ResourceVO;
 import com.saasapi.contract.security.vo.RoleVO;
 
@@ -57,5 +59,15 @@ public class RBACBusiness extends AbstractBizService {
 		}
 		sb.append(" order by sort asc");
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), ResourceVO.class);
+	}
+	
+	public List<PrivilegeVO> listRoleResource(Long roleId) {
+		String sql = "select b.code,b.name from sys_role_privilege a left join sys_resource b on a.id=b.id where a.role_id=?";
+		return jdbcTemplate.query(sql, new BeanPropertyRowMapper<PrivilegeVO>(PrivilegeVO.class), new Object[] { roleId });
+	}
+	
+	public List<PrivilegeVO> listRoleResource(String appId, Long roleId) {
+		String sql = "select b.code,b.name from sys_role_privilege a left join sys_resource b on a.id=b.id where a.role_id=? and b.app_id=?";
+		return jdbcTemplate.query(sql, new BeanPropertyRowMapper<PrivilegeVO>(PrivilegeVO.class), new Object[] { roleId, appId });
 	}
 }
