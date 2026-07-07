@@ -14,11 +14,16 @@ import com.javapai.framework.action.RstResult;
 import com.saasapi.contract.security.SecurityContract;
 import com.saasapi.contract.security.dto.AddRolePrivilegeDTO;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
+import com.saasapi.contract.security.dto.ResourceCreateDTO;
+import com.saasapi.contract.security.dto.ResourceDeleteDTO;
+import com.saasapi.contract.security.dto.ResourceListDTO;
+import com.saasapi.contract.security.dto.ResourceUpdateDTO;
 import com.saasapi.contract.security.dto.RoleDTO;
 import com.saasapi.contract.security.dto.RoleDeleteDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
 import com.saasapi.contract.security.dto.RoleUpdateDTO;
 import com.saasapi.contract.security.vo.LoginVO;
+import com.saasapi.contract.security.vo.ResourceVO;
 import com.saasapi.contract.security.vo.RoleVO;
 
 /**
@@ -62,16 +67,25 @@ public class AuthorizationController {
 		return ResultBuilder.normalResult();
 	}
 	
-//	@PostMapping(value = "/addPrivilege.php")
-//	public RstResult<String> addPrivilege(@RequestBody SysPrivilege privilege) {
-//		return securityService.addPrivilege(privilege.getPrivilegeCode(), privilege.getPrivilegeName());
-//	}
-//	
-//	@RequestMapping("listPrivilege.php")
-//	public RstResult<List<SysPrivilege>> listPrivilege() {
-//		SecurityService ss = new SecurityService();
-//		return RstResultBuilder.buildResult(securityService.l.listPrivilege());
-//	}
+	@PostMapping(value = "/createResource.php")
+	public RstResult<String> addResource(@RequestBody ResourceCreateDTO dto) {
+		return securityService.createResource(dto);
+	}
+	
+	@PostMapping(value = "/deleteResource.php")
+	public RstResult<String> deleteResource(@RequestBody ResourceDeleteDTO dto) {
+		return securityService.deleteResource(dto);
+	}
+	
+	@PostMapping(value = "/updateResource.php")
+	public RstResult<String> updateResource(@RequestBody ResourceUpdateDTO dto) {
+		return securityService.updateResource(dto);
+	}
+	
+	@RequestMapping("/listResource.php")
+	public PageResult<ResourceVO> listResource(@RequestBody ResourceListDTO dto) {
+		return securityService.listResource(dto);
+	}
 //	
 //	@RequestMapping("listPrivilegeTree.php")
 //	public RstResult<List<SysPrivilege>> listPrivilegeTree() {

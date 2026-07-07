@@ -34,6 +34,10 @@ import com.javapai.framework.utils.UtilDateTime;
 import com.saasapi.contract.security.SecurityContract;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
 import com.saasapi.contract.security.dto.MenuDTO;
+import com.saasapi.contract.security.dto.ResourceCreateDTO;
+import com.saasapi.contract.security.dto.ResourceDeleteDTO;
+import com.saasapi.contract.security.dto.ResourceListDTO;
+import com.saasapi.contract.security.dto.ResourceUpdateDTO;
 import com.saasapi.contract.security.dto.RoleDTO;
 import com.saasapi.contract.security.dto.RoleDeleteDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
@@ -164,16 +168,96 @@ public class SecurityService implements SecurityContract {
 	}
 	
 	@Override
-	public RstResult<List<ResourceVO>> listResource(String resType) {
-		if(StringUtils.isBlank(resType)) {
+	public RstResult<String> createResource(ResourceCreateDTO dto) {
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		if (StringUtils.isBlank(dto.getResType())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY, "资源类型未指定！");
+		}
+		if (StringUtils.isBlank(dto.getResCode()) || StringUtils.isBlank(dto.getResName())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
-		
-		return ResultBuilder.normalResult(resourceDao.selectResource(resType).stream().map(mapper -> {
-			ResourceVO vo = new ResourceVO();
-			BeanUtils.copyProperties(mapper, vo);
-			return vo;
-		}).collect(Collectors.toList()));
+		SysResource priviliege = resourceDao.findByCode(dto.getResCode());
+		if (null != priviliege) {
+			logger.warn("------>权限编码:{}对应的权限名({})已存在,请确认!", dto.getResCode(), priviliege.getName());
+			return ResultBuilder.buildResult(SecurityECode.PRIVILIGE_EXISIT);
+		}
+
+		SysResource entity = new SysResource();
+		entity.setAppId(dto.getAppId());
+		entity.setType(dto.getResType());
+		entity.setCode(dto.getResCode());
+		entity.setName(dto.getResName());
+		entity.setUrl(dto.getResUrl());
+		entity.setRemark(dto.getResRemark());
+		resourceDao.save(entity);
+		return ResultBuilder.normalResult();
+	}
+
+	@Override
+	public RstResult<String> deleteResource(ResourceDeleteDTO dto) {
+		if (StringUtils.isBlank(dto.getResId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		}
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		Optional<SysResource> optional = resourceDao.findById(dto.getResId());
+		if (!optional.isPresent() || !optional.get().getAppId().equals(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		}
+		List<SysResource> childList = resourceDao.findByParent(dto.getResId());
+		if (null != childList && childList.size() > 0) {
+			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE, "当前资源存在子节点，无法删除！");
+		}
+		resourceDao.delete(optional.get());
+		logger.info("--->[{}]资源信息已删除！", dto.getResId());
+		return ResultBuilder.normalResult();
+	}
+
+	@Override
+	public RstResult<String> updateResource(ResourceUpdateDTO dto) {
+		if (StringUtils.isBlank(dto.getResId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		}
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		Optional<SysResource> optional = resourceDao.findById(dto.getResId());
+		if (!optional.isPresent() || !optional.get().getAppId().equals(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		}
+		if (StringUtils.isNotBlank(dto.getResName())) {
+			optional.get().setName(dto.getResName());
+		}
+		// code不能更新（怕有地方引用）
+//		if (StringUtils.isNotBlank(dto.getResCode())) {
+//			optional.get().setCode(dto.getResCode());
+//		}
+//		if (StringUtils.isNotBlank(dto.getIcon())) {
+//			optional.get().setIcon(dto.getIcon());
+//		}
+		if (StringUtils.isNotBlank(dto.getResUrl())) {
+			optional.get().setUrl(dto.getResUrl());
+		}
+//		if (StringUtils.isNotBlank(dto.getParent())) {
+//			optional.get().setParent(dto.getParent());
+//		}
+//		if (dto.getSort() != null) {
+//			optional.get().setSort(dto.getSort());
+//		}
+		if (StringUtils.isNotBlank(dto.getResRemark())) {
+			optional.get().setRemark(dto.getResRemark());
+		}
+		resourceDao.save(optional.get());
+		logger.info("--->[{}]资源信息已更新！", dto.getResId());
+		return ResultBuilder.normalResult();
+	}
+	
+	@Override
+	public PageResult<ResourceVO> listResource(ResourceListDTO dto) {
+		return rbacBusiness.listResource(dto);
 	}
 	
 	@Override
@@ -272,58 +356,6 @@ public class SecurityService implements SecurityContract {
 		return rbacBusiness.listRole(dto);
 	}
 	
-//	/**
-//	 * 保存权限
-//	 * 
-//	 * @param role
-//	 */
-//	public RstResult<String> addPrivilege(SysPrivilege dto){
-//		return addPrivilege(dto.getPrivilegeCode(), dto.getPrivilegeName());
-//	};
-	
-	@Override
-	public RstResult<String> addPrivilege(String code, String name) {
-		if (StringUtils.isBlank(code) || StringUtils.isBlank(name)) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		}
-
-		SysResource priviliege = resourceDao.findByCode(code);
-		if (null != priviliege) {
-			logger.warn("------>权限编码:{}对应的权限名({})已存在,请确认!", code, priviliege.getName());
-			return ResultBuilder.buildResult(SecurityECode.PRIVILIGE_EXISIT);
-		}
-
-		SysResource entity = new SysResource();
-		entity.setCode(code);
-		entity.setName(name);
-		resourceDao.save(entity);
-		return ResultBuilder.normalResult();
-	}
-
-	/**
-	 * 列出权限信息
-	 * 
-	 * @return
-	 */
-	public List<SysResource> listPrivilege(){
-		return resourceDao.findAll();//.stream().map(mapper -> {
-//			RoleVO vo = new RoleVO();
-//			BeanUtils.copyProperties(mapper, vo);
-//			return vo;
-//		}).collect(Collectors.toList());
-	};
-
-	/**
-	 * 删除权限
-	 * 
-	 * @param id
-	 *            　主键ID
-	 */
-	public boolean deletePrivilege(String id){
-		resourceDao.deleteById(id);
-		return true;
-	};
-
 	/**
 	 * 资源/模块列表信息
 	 * 

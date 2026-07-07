@@ -43,7 +43,7 @@ public class SysResource implements Serializable {
 	/**
 	 * 资源名称.
 	 */
-	@Column(name = "name", length = 60, nullable = true)
+	@Column(name = "name", length = 60, nullable = false)
 	private String name;
 	/**
 	 * 资源icon.
@@ -60,7 +60,7 @@ public class SysResource implements Serializable {
 	 * [按纽Button、菜单Menu、模块Moudule、子系统System、默认根Root]<br>
 	 * <strong>提示：</strong>菜单类型的资源必有上级节点（即使没有父菜单节点也必要会有关联一个模块或是子系统）。
 	 */
-	@Column(name = "type", length = 150, nullable = true)
+	@Column(name = "type", length = 150, nullable = false)
 	private String type;
 	/**
 	 * 
