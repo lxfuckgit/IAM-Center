@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import com.javapai.framework.common.domain.AbstractDomain;
 
@@ -22,7 +23,8 @@ import com.javapai.framework.common.domain.AbstractDomain;
  * 
  */
 @Entity
-@Table(name = "sys_login")
+//@Table(name = "sys_login")
+@Table(name = "sys_login", uniqueConstraints = { @UniqueConstraint(columnNames = { "appId", "login_name" }) })
 public class SysLogin extends AbstractDomain implements Serializable {
 	private static final long serialVersionUID = 1L;
 	/**
@@ -38,7 +40,7 @@ public class SysLogin extends AbstractDomain implements Serializable {
 	 * 用户账号登录.<br>
 	 * 可自定义输入用户名.
 	 */
-	@Column(name = "login_name", length = 30, unique = true, nullable = false)
+	@Column(name = "login_name", length = 30, nullable = false)
 	private String loginName;
 	/**
 	 * 登录密码(建议使用md5加密后的密码串).<br>

@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.constant.Constant;
@@ -54,6 +55,9 @@ public class SecurityBusiness {
 	
 	@Autowired
 	private JwtUtil jwtUtil; 
+	
+	@Value("${jwt.expiration:3600000}")
+	private Long expiration;
 
 	/**
 	 * 检查当前登录名在某app产线上的可用性.<br>
@@ -293,7 +297,7 @@ public class SecurityBusiness {
 //		String token = getToken(entity.getAppId(), entity.getLoginName(), entity.getLoginPwd());
 		String token = getJWTToken(entity.getAppId(), String.valueOf(entity.getLoginId()), entity.getLoginName());
 		entity.setLoginToken(token);
-		entity.setLoginExpire(System.currentTimeMillis() + 36000L);
+		entity.setLoginExpire(System.currentTimeMillis() + expiration);
 		sysLoginRepository.save(entity);
 		
 		/* 2:记录登录日志(异步) */
@@ -304,7 +308,8 @@ public class SecurityBusiness {
 		// session.setLoginType(loginType);
 		
 		/* 3、响应登录成功的报文 */
-		LoginVO loginVO = new LoginVO(token);
+		LoginVO loginVO = new LoginVO();
+		loginVO.setAccessToken(token);
 		loginVO.setUserId(entity.getLoginId());
 		loginVO.setNickName(entity.getNickName());
 		loginVO.setLoginName(entity.getLoginName());
@@ -317,18 +322,23 @@ public class SecurityBusiness {
 	}
 	
 	@Transactional
-	public void doLogout(String token) {
-		/* 1.validate token */
-		// if redis exsit, select userLogin,and update token is null
-		int r1 = sysLoginRepository.deleteByLoginToken(token);
-		logger.info("--->[{}]delete token:{} ", r1, token);
+	public boolean doLogout(String token) {
+		/* 1.select userLogin,and update token is null */
+		SysLogin login = sysLoginRepository.findByLoginToken(token);
+		if (null != login) {
+			login.setLoginExpire(0L);
+			logger.info("--->[{}]set token expire!", login.getLoginName());
+		}
 
 		/* 2.clear session */
 //		sessionRepository.delete(dto.getToken());
 		SecurityContextHolder.clearContext();
-		logger.info("--->delete session:{} ", token);
+		logger.info("--->[{}]delete session over！", login.getLoginName());
 
-		/* 3.clear redis */
+		/* 3.clear redis(if redis exsit) */
+
+		/* 4.return result */
+		return true;
 	}
 
 	/**
@@ -421,5 +431,31 @@ public class SecurityBusiness {
 //		claims.put("scopes", Arrays.asList(app.getAllowedScopes().split(",")));
 		return jwtUtil.generateToken(loginId, claims);
 	}
+	
+//	@Transactional
+//	public String refreshToken(String oldToken) {
+//		try {
+//			String loginId = jwtUtil.extractSubject(oldToken);
+//			String username = jwtUtil.parseToken(oldToken).get("username", String.class);
+//			Optional<SysLogin> optional = sysLoginRepository.findById(Long.valueOf(loginId));
+//			if (!optional.isPresent()) {
+//				return null;
+//			}
+//			SysLogin entity = optional.get();
+//			if (!entity.getLoginToken().equals(oldToken)) {
+//				return null;
+//			}
+////			String appId = jwtUtil.extractAppId(oldToken);
+//			String newToken = getJWTToken(optional.get().getAppId(), loginId, username);
+//			entity.setLoginToken(newToken);
+//			entity.setLoginExpire(System.currentTimeMillis() + expiration);
+//			sysLoginRepository.save(entity);
+//			logger.info("--->用户[{}]token已自动刷新!", loginId);
+//			return newToken;
+//		} catch (Exception e) {
+//			logger.error("--->token刷新异常:{}", e.getMessage());
+//			return null;
+//		}
+//	}
 	
 }

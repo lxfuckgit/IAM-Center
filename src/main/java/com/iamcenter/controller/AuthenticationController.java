@@ -24,6 +24,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 @RestController
 @RequestMapping("/iam")
+//@RequestMapping("/iam/auth")
 public class AuthenticationController {
 	@DubboReference(timeout = 5000, check = false)
 	private AuthContract authContract;
@@ -43,7 +44,7 @@ public class AuthenticationController {
 		return authContract.register(param);
 	}
 
-	@RequestMapping(value = "/auth/smsRegister.php")
+	@RequestMapping(value = "/smsRegister.php")
 	public RstResult<String> smsRegister(@RequestBody RegSmsDTO param) {
 		return authContract.register(param);
 	}
@@ -53,20 +54,30 @@ public class AuthenticationController {
 		return authContract.userLogin(param);
 	}
 
-	@RequestMapping(value = "/auth/logout.php")
+	@RequestMapping(value = "/logout.php")
 	public RstResult<String> logout(HttpServletRequest requst) {
 		String token = requst.getHeader("Authorization");
 		return authContract.logout(new LogoutDTO(token));
 	}
 	
-	@RequestMapping(value = "/auth/resetPassword.php")
+	@RequestMapping(value = "/resetPassword.php")
 	public RstResult<String> resetPassword(@RequestBody ResetPwdDTO dto) {
 		return authContract.resetPassword(dto);
 	}
 	
-	@RequestMapping(value = "/auth/changePassword.php")
+	@RequestMapping(value = "/changePassword.php")
 	public RstResult<String> changePassword(@RequestBody ChangePwdDTO dto) {
 		return authContract.changePassword(dto);
 	}
+	
+//	@RequestMapping(value = "/auth/validateToken.php")
+//	public RstResult<String> validateToken(@RequestBody ValidateTokenDTO dto) {
+//		return authContract.validateToken(dto);
+//	}
+//	
+//	@RequestMapping(value = "/auth/refreshToken.php")
+//	public RstResult<String> refreshToken(@RequestBody ValidateTokenDTO dto) {
+//		return authContract.refreshToken(dto);
+//	}
 
 }
