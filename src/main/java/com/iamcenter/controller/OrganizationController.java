@@ -32,7 +32,8 @@ import com.saasapi.contract.party.vo.DepartmentVO;
 import com.saasapi.contract.party.vo.PersonVO;
 
 @RestController
-@RequestMapping("/organization")
+@RequestMapping("/iam")
+//@RequestMapping("/iam/organization")
 public class OrganizationController {
 
 	@Autowired

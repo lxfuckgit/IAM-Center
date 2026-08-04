@@ -259,10 +259,7 @@ public final class AuthService implements AuthContract {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_CHANNEL);
 		}
 		if (StringUtils.isEmpty(dto.getSmsCode())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_CHANNEL);
-		}
-		if (StringUtils.isEmpty(dto.getUsername())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_CHANNEL);
+			return ResultBuilder.buildResult(ErrorCode.INVALID_CODE);
 		}
 
 		/* 读取相关配置 */
@@ -318,7 +315,8 @@ public final class AuthService implements AuthContract {
 //		} else {
 //			return RstResultBuilder.buildErrorResponse(ErrorCode.ERROR_LOGOUT);
 //		}
-		securityBusiness.doLogout(dto.getToken());
+		boolean r = securityBusiness.doLogout(dto.getToken());
+		logger.info("--->用户登出结果：", r);
 		return ResultBuilder.normalResult();
 	}
 
@@ -441,11 +439,10 @@ public final class AuthService implements AuthContract {
 	}
 
 	@Override
-	public RstResult<Long> validateToken(ValidateTokenDTO dto) {
-		// if(StringUtils.isEmpty(dto.getToken())) {
-		// return
-		// ResponseResultBuilder.buildErrorResponse(ErrorCode.PARAMS_AUTH_CODE);
-		// }
+	public RstResult<String> validateToken(ValidateTokenDTO dto) {
+//		if (StringUtils.isEmpty(dto.getToken())) {
+//			return ResultBuilder.buildErrorResponse(ErrorCode.PARAMS_EMPTYE);
+//		}
 		// if(StringUtils.isEmpty(dto.getChannel())) {
 		// return
 		// ResponseResultBuilder.buildErrorResponse(ErrorCode.PARAMS_CHANNEL);
@@ -476,6 +473,11 @@ public final class AuthService implements AuthContract {
 		// return
 		// ResponseResultBuilder.buildNormalResponse(session.getUserId());
 	}
+	
+	@Override
+	public RstResult<String> refreshToken(ValidateTokenDTO arg0) {
+		return null;
+	}
 
 	/**
 	 * 验证登录密码规则.<br>
@@ -502,8 +504,6 @@ public final class AuthService implements AuthContract {
 	@Override
 	public RstResult<String> sendRegSms(String phone) {
 		return null;
-
-		// TODO Auto-generated method stub
 //		if("1".equalsIgnoreCase(isSmsFake)){
 //			SendSmsDTO sms = new SendSmsDTO();
 //			sms.setPhone(phone);

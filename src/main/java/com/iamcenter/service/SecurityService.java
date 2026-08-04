@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.RBACBusiness;
+import com.iamcenter.business.SecurityBusiness;
 import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
@@ -28,11 +29,13 @@ import com.iamcenter.repository.SysRoleRepository;
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
+import com.javapai.framework.common.vo.tree.TreeVO;
 import com.javapai.framework.enums.ErrorCode;
 import com.javapai.framework.utils.UtilDateTime;
 import com.saasapi.contract.security.SecurityContract;
+import com.saasapi.contract.security.dto.LoginCreateDTO;
+import com.saasapi.contract.security.dto.LoginListDTO;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
-import com.saasapi.contract.security.dto.MenuDTO;
 import com.saasapi.contract.security.dto.ResourceCreateDTO;
 import com.saasapi.contract.security.dto.ResourceDeleteDTO;
 import com.saasapi.contract.security.dto.ResourceListDTO;
@@ -41,11 +44,10 @@ import com.saasapi.contract.security.dto.RoleDTO;
 import com.saasapi.contract.security.dto.RoleDeleteDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
 import com.saasapi.contract.security.dto.RoleUpdateDTO;
-import com.saasapi.contract.security.enums.ResEnum;
 import com.saasapi.contract.security.enums.SecurityECode;
+import com.saasapi.contract.security.vo.LoginListVO;
 import com.saasapi.contract.security.vo.LoginRoleVO;
 import com.saasapi.contract.security.vo.LoginVO;
-import com.saasapi.contract.security.vo.MenuVO;
 import com.saasapi.contract.security.vo.PrivilegeVO;
 import com.saasapi.contract.security.vo.ResourceVO;
 import com.saasapi.contract.security.vo.RoleVO;
@@ -79,85 +81,88 @@ public class SecurityService implements SecurityContract {
 	RBACBusiness rbacBusiness;
 	
 	@Autowired
+	SecurityBusiness securityBusiness;
+	
+	@Autowired
 	protected JdbcTemplate jdbcTemplate;
 	
 	@Autowired
 	protected JwtUtil jwtUtil;
 	
-	@Override
-	public RstResult<String> createMenu(MenuDTO dto) {
-		//因为菜单的特殊性，不仅验证了code的唯一性，还验证了类型和名称不能重复。
-		SysResource menu = resourceDao.findByCode(dto.getCode());
-		if (null != menu) {
-			logger.warn("------>菜单编码:{}对应的菜单名称({})已存在,请确认!", dto.getCode(), menu.getName());
-			return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
-		}
-		List<SysResource> list = resourceDao.findByTypeAndName(ResEnum.Menu.name(), dto.getName());
-		if (null == list || list.size()==0 ) {
-			SysResource entity = new SysResource();
-			BeanUtils.copyProperties(dto, entity);
-			entity.setType(ResEnum.Menu.name());
-			resourceDao.save(entity);
-			logger.warn("------>菜单编码:{}对应的菜单名称({})已存在,请确认!", dto.getCode(), dto.getName());
-			return ResultBuilder.normalResult();
-		} else {
-			logger.warn("------>菜单名称({})已存在,请确认!", dto.getName());
-			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
-		}
-	}
-
-	@Override
-	public RstResult<String> updateMenu(MenuVO dto) {
-		if (StringUtils.isBlank(dto.getId())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		}
-		// 检查menu存在性。
-		Optional<SysResource> optional = resourceDao.findById(dto.getId());
-		if (!optional.isPresent()) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		}
-		if (StringUtils.isNotBlank(dto.getName())) {
-			optional.get().setName(dto.getName());
-		}
-		if (StringUtils.isNotBlank(dto.getIcon())) {
-			optional.get().setIcon(dto.getIcon());
-		}
-		if (StringUtils.isNotBlank(dto.getUrl())) {
-			optional.get().setUrl(dto.getUrl());
-		}
-		if (StringUtils.isNotBlank(dto.getParent())) {
-			optional.get().setUrl(dto.getParent());
-		}
-		resourceDao.save(optional.get());
-		return ResultBuilder.normalResult();
-	}
-
-	@Override
-	public RstResult<String> deleteMenu(String menuId) {
-		if(StringUtils.isBlank(menuId)) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		}
-		//检查menu存在性。
-		Optional<SysResource> optional = resourceDao.findById(menuId);
-		if(!optional.isPresent()) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		}
-		//检查menu是否有子节点。
-		List<SysResource> childList = resourceDao.findByParent(menuId);
-		if (childList.size() > 0) {
-			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE, "当前菜单存在子结点，无法删除！");
-		}
-		//删除menu节点。
-		resourceDao.delete(optional.get());
-		return ResultBuilder.normalResult();
-	}
+//	@Override
+//	public RstResult<String> createMenu(MenuDTO dto) {
+//		//因为菜单的特殊性，不仅验证了code的唯一性，还验证了类型和名称不能重复。
+//		SysResource menu = resourceDao.findByResCode(dto.getResCode());
+//		if (null != menu) {
+//			logger.warn("------>菜单编码:{}对应的菜单名称({})已存在,请确认!", dto.getResCode(), menu.getResName());
+//			return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
+//		}
+//		List<SysResource> list = resourceDao.findByResTypeAndResName(ResEnum.Menu.name(), dto.getResName());
+//		if (null == list || list.size()==0 ) {
+//			SysResource entity = new SysResource();
+//			BeanUtils.copyProperties(dto, entity);
+//			entity.setResType(ResEnum.Menu.name());
+//			resourceDao.save(entity);
+//			logger.warn("------>菜单编码:{}对应的菜单名称({})已存在,请确认!", dto.getResCode(), dto.getResName());
+//			return ResultBuilder.normalResult();
+//		} else {
+//			logger.warn("------>菜单名称({})已存在,请确认!", dto.getResName());
+//			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
+//		}
+//	}
+//
+//	@Override
+//	public RstResult<String> updateMenu(MenuVO dto) {
+//		if (StringUtils.isBlank(dto.getId())) {
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+//		}
+//		// 检查menu存在性。
+//		Optional<SysResource> optional = resourceDao.findById(dto.getId());
+//		if (!optional.isPresent()) {
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+//		}
+//		if (StringUtils.isNotBlank(dto.getResName())) {
+//			optional.get().setResName(dto.getResName());
+//		}
+//		if (StringUtils.isNotBlank(dto.getResIcon())) {
+//			optional.get().setResIcon(dto.getResIcon());
+//		}
+//		if (StringUtils.isNotBlank(dto.getResUrl())) {
+//			optional.get().setResUrl(dto.getResUrl());
+//		}
+//		if (StringUtils.isNotBlank(dto.getParentId())) {
+//			optional.get().setResUrl(dto.getParentId());
+//		}
+//		resourceDao.save(optional.get());
+//		return ResultBuilder.normalResult();
+//	}
+//
+//	@Override
+//	public RstResult<String> deleteMenu(String menuId) {
+//		if(StringUtils.isBlank(menuId)) {
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+//		}
+//		//检查menu存在性。
+//		Optional<SysResource> optional = resourceDao.findById(menuId);
+//		if(!optional.isPresent()) {
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+//		}
+//		//检查menu是否有子节点。
+//		List<SysResource> childList = resourceDao.findByParentId(menuId);
+//		if (childList.size() > 0) {
+//			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE, "当前菜单存在子结点，无法删除！");
+//		}
+//		//删除menu节点。
+//		resourceDao.delete(optional.get());
+//		return ResultBuilder.normalResult();
+//	}
 	
 	@Override
 	public RstResult<ResourceVO> getResource(String resourceId) {
 		if (StringUtils.isBlank(resourceId)) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
 		}
-		Optional<SysResource> optional = resourceDao.findById(resourceId);
+		Optional<SysResource> optional = resourceDao.findById(Long.valueOf(resourceId));
 		if (!optional.isPresent()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
 		}
@@ -177,19 +182,22 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isBlank(dto.getResCode()) || StringUtils.isBlank(dto.getResName())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
-		SysResource priviliege = resourceDao.findByCode(dto.getResCode());
+		SysResource priviliege = resourceDao.findByResCode(dto.getResCode());
 		if (null != priviliege) {
-			logger.warn("------>权限编码:{}对应的权限名({})已存在,请确认!", dto.getResCode(), priviliege.getName());
+			logger.warn("------>权限编码:{}对应的权限名({})已存在,请确认!", dto.getResCode(), priviliege.getResName());
 			return ResultBuilder.buildResult(SecurityECode.PRIVILIGE_EXISIT);
 		}
 
 		SysResource entity = new SysResource();
 		entity.setAppId(dto.getAppId());
-		entity.setType(dto.getResType());
-		entity.setCode(dto.getResCode());
-		entity.setName(dto.getResName());
-		entity.setUrl(dto.getResUrl());
-		entity.setRemark(dto.getResRemark());
+		entity.setParentId(Long.valueOf(dto.getParentId()));
+		entity.setResType(dto.getResType());
+		entity.setResCode(dto.getResCode());
+		entity.setResName(dto.getResName());
+		entity.setResUrl(dto.getResUrl());
+		entity.setSequence(dto.getSequence());
+		entity.setResRemark(dto.getResRemark());
+		entity.setStatusId(dto.getStatusId());
 		resourceDao.save(entity);
 		return ResultBuilder.normalResult();
 	}
@@ -202,11 +210,11 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
-		Optional<SysResource> optional = resourceDao.findById(dto.getResId());
+		Optional<SysResource> optional = resourceDao.findById(Long.valueOf(dto.getResId()));
 		if (!optional.isPresent() || !optional.get().getAppId().equals(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
-		List<SysResource> childList = resourceDao.findByParent(dto.getResId());
+		List<SysResource> childList = resourceDao.findByParentId(Long.valueOf(dto.getResId()));
 		if (null != childList && childList.size() > 0) {
 			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE, "当前资源存在子节点，无法删除！");
 		}
@@ -223,12 +231,18 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
-		Optional<SysResource> optional = resourceDao.findById(dto.getResId());
+		Optional<SysResource> optional = resourceDao.findById(Long.valueOf(dto.getResId()));
 		if (!optional.isPresent() || !optional.get().getAppId().equals(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
+		if (StringUtils.isNotBlank(dto.getParentId())) {
+			optional.get().setParentId(Long.valueOf(dto.getParentId()));
+		}
+		if (StringUtils.isNotBlank(dto.getResType())) {
+			optional.get().setResType(dto.getResType());
+		}
 		if (StringUtils.isNotBlank(dto.getResName())) {
-			optional.get().setName(dto.getResName());
+			optional.get().setResName(dto.getResName());
 		}
 		// code不能更新（怕有地方引用）
 //		if (StringUtils.isNotBlank(dto.getResCode())) {
@@ -238,20 +252,42 @@ public class SecurityService implements SecurityContract {
 //			optional.get().setIcon(dto.getIcon());
 //		}
 		if (StringUtils.isNotBlank(dto.getResUrl())) {
-			optional.get().setUrl(dto.getResUrl());
+			optional.get().setResUrl(dto.getResUrl());
 		}
-//		if (StringUtils.isNotBlank(dto.getParent())) {
-//			optional.get().setParent(dto.getParent());
-//		}
-//		if (dto.getSort() != null) {
-//			optional.get().setSort(dto.getSort());
-//		}
 		if (StringUtils.isNotBlank(dto.getResRemark())) {
-			optional.get().setRemark(dto.getResRemark());
+			optional.get().setResRemark(dto.getResRemark());
+		}
+		if (dto.getSequence() != null) {
+			optional.get().setSequence(dto.getSequence());
 		}
 		resourceDao.save(optional.get());
 		logger.info("--->[{}]资源信息已更新！", dto.getResId());
 		return ResultBuilder.normalResult();
+	}
+	
+	@Override
+	public RstResult<List<TreeVO>> treeResource(ResourceListDTO dto) {
+		List<SysResource> list = resourceDao.findByAppIdAndParentId(dto.getAppId(), 0L);
+		List<TreeVO> treeList = list.stream().map(mapper -> {
+			TreeVO vo = new TreeVO();
+			vo.setKey(String.valueOf(mapper.getId()));
+			vo.setValue(mapper.getResName());
+			vo.setIcon(mapper.getResType());
+			vo.setChildren(convertResourceToTreeVO(resourceDao.findByAppIdAndParentId(dto.getAppId(), mapper.getId())));
+			return vo;
+		}).collect(Collectors.toList());
+		return ResultBuilder.normalResult(treeList);
+	}
+	
+	private List<TreeVO> convertResourceToTreeVO(List<SysResource> resourceList) {
+		return resourceList.stream().map(mapper -> {
+			TreeVO vo = new TreeVO();
+			vo.setKey(String.valueOf(mapper.getId()));
+			vo.setValue(mapper.getResName());
+			vo.setIcon(mapper.getResType());
+			vo.setChildren(convertResourceToTreeVO(resourceDao.findByAppIdAndParentId(mapper.getAppId(), mapper.getId())));
+			return vo;
+		}).collect(Collectors.toList());
 	}
 	
 	@Override
@@ -265,7 +301,7 @@ public class SecurityService implements SecurityContract {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
 
-		return ResultBuilder.normalResult(resourceDao.findByParentOrderBySortAsc(parentId).stream().map(mapper -> {
+		return ResultBuilder.normalResult(resourceDao.findByParentIdOrderBySequenceAsc(Long.valueOf(parentId)).stream().map(mapper -> {
 			ResourceVO vo = new ResourceVO();
 			BeanUtils.copyProperties(mapper, vo);
 			return vo;
@@ -277,7 +313,8 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
-		if(StringUtils.isEmpty(SecurityContextHolder.getContext().getAuthentication().getName())) {
+		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+		if(StringUtils.isEmpty(userId)) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
 		}
 		if (StringUtils.isBlank(dto.getRoleCode()) && StringUtils.isBlank(dto.getRoleName())) {
@@ -294,10 +331,38 @@ public class SecurityService implements SecurityContract {
 		entity.setAppId(dto.getAppId());
 		entity.setCode(dto.getRoleCode());
 		entity.setName(dto.getRoleName());
-		entity.setCreatorId(SecurityContextHolder.getContext().getAuthentication().getName());
+		entity.setStatusId(dto.getStatusId());
+		entity.setCreatorId(userId);
 		entity.setRemark(dto.getRoleRemark());
 		roleRepository.save(entity);
 		return ResultBuilder.normalResult();
+	}
+	
+	@Override
+	public RstResult<RoleVO> getRole(RoleDeleteDTO dto) {
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		if (StringUtils.isEmpty(SecurityContextHolder.getContext().getAuthentication().getName())) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+		}
+		if (StringUtils.isBlank(dto.getAppId()) && null == dto.getRoleId()) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		}
+
+		Optional<SysRole> optional = roleRepository.findById(dto.getRoleId());
+		if (optional.isPresent()) {
+			RoleVO role = new RoleVO();
+			role.setRoleId(String.valueOf(optional.get().getId()));
+			role.setAppId(optional.get().getAppId());
+			role.setRoleCode(optional.get().getCode());
+			role.setRoleName(optional.get().getName());
+//			role.setSequence(optional.get().getId());
+			role.setRoleRemark(optional.get().getRemark());
+			return ResultBuilder.normalResult(role);
+		} else {
+			return ResultBuilder.buildResult(SecurityECode.ROLE_INVALID);
+		}
 	}
 	
 	@Override
@@ -307,8 +372,14 @@ public class SecurityService implements SecurityContract {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
 		}
 		Optional<SysRole> optional = roleRepository.findById(dto.getRoleId());
-		if (!optional.isPresent() || !optional.get().getCreatorId().equals(userId)) {
-			return ResultBuilder.buildResult("40000002", "当前角色个人不存在!");
+		if (!optional.isPresent()) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		if (!optional.get().getAppId().equals(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_ILLEGE);
+		}
+		if (!optional.get().getCreatorId().equals(userId)) {
+			return ResultBuilder.buildResult("40000002", "当前角色只能由创建人删除!");
 		}
 		List<SysLoginRole> roleList = loginRoleRepository.findByRoleId(dto.getRoleId());
 		if (null != roleList && roleList.size() > 0) {
@@ -381,13 +452,41 @@ public class SecurityService implements SecurityContract {
 //	public SysLogin getSysLoginByLoginName(String loginname);
 	
 	@Override
-	public RstResult<List<LoginVO>> listLogin() {
-		return ResultBuilder.normalResult(loginRepository.findAll().stream().map(mapper -> {
-			LoginVO vo = new LoginVO();
-			vo.setLoginName(mapper.getLoginName());
-			vo.setStatus(mapper.getLoginState());
-			return vo;
-		}).collect(Collectors.toList()));
+	public RstResult<String> createLogin(LoginCreateDTO dto) {
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+//		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+//		if(StringUtils.isEmpty(userId)) {
+//			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+//		}
+//		if (StringUtils.isBlank(dto.getRoleCode()) && StringUtils.isBlank(dto.getRoleName())) {
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+//		}
+
+		SysLogin login = loginRepository.findByAppIdAndLoginName(dto.getAppId(), dto.getLoginName());
+		if (null != login) {
+			logger.warn("------>登录账户({})已存在,请确认!", dto.getLoginName());
+			return ResultBuilder.buildResult(SecurityECode.LOGIN_NAME_EXISIT);
+		} else {
+			Long r = securityBusiness.doRegister(dto.getAppId(), dto.getLoginName(), dto.getLoginPassword(), "v.9.9");
+			logger.warn("------>登录账户({})创建结果：", dto.getLoginName(), r);
+			return ResultBuilder.normalResult();
+		}
+	}
+	
+	@Override
+	public PageResult<LoginListVO> listLogin(LoginListDTO dto) {
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+		}
+		return rbacBusiness.listLogin(dto);
+//		return ResultBuilder.normalResult(loginRepository.findAll().stream().map(mapper -> {
+//			LoginVO vo = new LoginVO();
+//			vo.setLoginName(mapper.getLoginName());
+//			vo.setStatus(mapper.getLoginState());
+//			return vo;
+//		}).collect(Collectors.toList()));
 	}
 	
 	@Override
@@ -474,10 +573,23 @@ public class SecurityService implements SecurityContract {
 		logger.info("--->用户[{}]移除角色[{}]完成！", loginId, roleId);
 		return ResultBuilder.normalResult();
 	}
+	
+	@Override
+	public RstResult<Boolean> restoreLoginRoles(String appId, Long loginId, List<Long> roleIdList) {
+		if (StringUtils.isEmpty(appId)) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		Optional<SysLogin> loginOptional = loginRepository.findById(loginId);
+		if (!loginOptional.isPresent() || !loginOptional.get().getAppId().equals(appId)) {
+			return ResultBuilder.buildResult(SecurityECode.USERID_INVALID);
+		}
+		rbacBusiness.restoreLoginRoles(appId, loginId, roleIdList);
+		return ResultBuilder.normalResult();
+	}
 
 	@Override
 	@Transactional
-	public RstResult<Boolean> grantRolePrivilege(String appId, Long roleId, List<String> privilegeList) {
+	public RstResult<Boolean> grantRolePrivilege(String appId, Long roleId, List<Long> privilegeList) {
 		if (null == privilegeList || privilegeList.size() == 0) {
 			logger.warn("--->当前权限列表参数缺失，结束操作！");
 			return ResultBuilder.normalResult();
@@ -489,7 +601,7 @@ public class SecurityService implements SecurityContract {
 		// 添加权限
 		List<SysResource> resourceList = new ArrayList<SysResource>();
 		privilegeList.forEach(action -> {
-			resourceList.add(resourceDao.getReferenceById(action));
+			resourceList.add(resourceDao.getReferenceById(Long.valueOf(action)));
 		});
 		roleOptional.get().getResources().addAll(resourceList);
 		roleRepository.save(roleOptional.get());
@@ -498,7 +610,7 @@ public class SecurityService implements SecurityContract {
 
 	@Override
 	@Transactional
-	public RstResult<Boolean> revokeRolePrivilege(String appId, Long roleId, List<String> privilegeList) {
+	public RstResult<Boolean> revokeRolePrivilege(String appId, Long roleId, List<Long> privilegeList) {
 		if(null ==privilegeList || privilegeList.size()==0 ) {
 			logger.warn("--->当前权限列表参数缺失，结束操作！");
 			return ResultBuilder.normalResult();
@@ -510,16 +622,31 @@ public class SecurityService implements SecurityContract {
 		// 删除权限
 		List<SysResource> resourceList = new ArrayList<SysResource>();
 		privilegeList.forEach(action -> {
-			resourceList.add(resourceDao.getReferenceById(action));
+			resourceList.add(resourceDao.getReferenceById(Long.valueOf(action)));
 		});
 		roleOptional.get().getResources().removeAll(resourceList);
 		roleRepository.save(roleOptional.get());
 		return ResultBuilder.normalResult();
 	}
+	
+	@Override
+	public RstResult<List<Long>> listRoleResourceIds(String appId, Long roleId) {
+		return ResultBuilder.normalResult(roleRepository.listRoleResourceIds(Long.valueOf(roleId)));
+	}
 
 	@Override
 	public RstResult<List<PrivilegeVO>> listRolePrivilege(String appId, String roleId) {
 		return ResultBuilder.normalResult(rbacBusiness.listRoleResource(appId, Long.valueOf(roleId)));
+	}
+	
+	@Override
+	public RstResult<Boolean> restoreRoleResources(String appId, Long roleId, List<Long> resIdList) {
+		Optional<SysRole> optional = roleRepository.findById(roleId);
+		if (!optional.isPresent()) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		rbacBusiness.restoreRoleResourceList(appId, roleId, resIdList);
+		return ResultBuilder.normalResult();
 	}
 
 	@Override
@@ -540,5 +667,5 @@ public class SecurityService implements SecurityContract {
 
 		return ResultBuilder.normalResult(list);
 	}
-	
+
 }

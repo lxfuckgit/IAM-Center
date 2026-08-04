@@ -34,12 +34,22 @@ public class PartyBusiness extends AbstractBizService {
 	 * @return
 	 */
 	public PageResult<PersonVO> listPerson(PersonListDTO dto) {
+		List<Object> params = new ArrayList<Object>();
+		/* 防止跨应用查询，强制使用appId条件 */
+		params.add(dto.getAppId());
+		
 		StringBuffer sb = new StringBuffer();
-		sb.append("select * from hy102 where 1=1");
+		sb.append("select a.id as party_id,a.code as party_code,a.last_name as realname,sfz as id_card,status_id ");
+		sb.append(" from hy102 a left join hy100 b on a.id=b.id where b.app_id=?");
 		if (StringUtils.isNotBlank(dto.getAppId())) {
-
+			sb.append(" and b.app_id=?");
+			params.add(dto.getAppId());
 		}
-		return getPage(sb.toString(), dto.getPageIndex(), dto.getPageSize(), PersonVO.class);
+		if (StringUtils.isNotBlank(dto.getName())) {
+			sb.append(" and a.name like ?");
+			params.add("%" + dto.getName() + "%");
+		}
+		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), PersonVO.class);
 	}
 	
 	/**
@@ -67,7 +77,7 @@ public class PartyBusiness extends AbstractBizService {
 	public PageResult<DepartmentVO> listDepartment(DepartmentListDTO dto) {
 		List<Object> params = new ArrayList<Object>();
 		StringBuffer sb = new StringBuffer();
-		sb.append("select a.id,a.group_name as name ");
+		sb.append("select a.id,a.group_code as code,a.group_name as name ");
 		sb.append(" from hy101 a left join party_relation b on a.id=b.party_id_to left join hy100 c on a.id=c.id");
 		sb.append(" where c.role_type_id='ROLE_DETP'");
 		if (StringUtils.isNotBlank(dto.getCompanyId())) {

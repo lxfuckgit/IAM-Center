@@ -2,6 +2,8 @@ package com.iamcenter.domain.security;
 
 import java.io.Serializable;
 
+import com.javapai.framework.common.domain.TopBaseDomain;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -22,7 +24,7 @@ import jakarta.persistence.Table;
  */
 @Entity
 @Table(name = "sys_resource")
-public class SysResource implements Serializable {
+public class SysResource extends TopBaseDomain implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private static final int default_sort = 99;
@@ -34,50 +36,110 @@ public class SysResource implements Serializable {
 
 	@Column(name = "app_id", length = 30, nullable = false)
 	private String appId;
-
 	/**
-	 * 资源编号.
+	 * 上源资源类型
 	 */
-	@Column(name = "code", length = 50, unique = true, nullable = true)
-	private String code;
-	/**
-	 * 资源名称.
-	 */
-	@Column(name = "name", length = 60, nullable = false)
-	private String name;
-	/**
-	 * 资源icon.
-	 */
-	@Column(name = "icon", length = 100)
-	private String icon;
-	/**
-	 * 资源入口地址.
-	 */
-	@Column(name = "url", length = 150, nullable = true)
-	private String url;
+	@Column(name = "parent_id", length = 150)
+	private Long parentId;
 	/**
 	 * 资源类型.<br>
 	 * [按纽Button、菜单Menu、模块Moudule、子系统System、默认根Root]<br>
 	 * <strong>提示：</strong>菜单类型的资源必有上级节点（即使没有父菜单节点也必要会有关联一个模块或是子系统）。
 	 */
-	@Column(name = "type", length = 150, nullable = false)
-	private String type;
+	@Column(name = "res_type", length = 150, nullable = false)
+	private String resType;
 	/**
-	 * 
+	 * 资源编号.
 	 */
-	@Column(name = "parent", length = 150)
-	private String parent;
+	@Column(name = "res_code", length = 50, unique = true, nullable = false)
+	private String resCode;
+	/**
+	 * 资源名称.
+	 */
+	@Column(name = "res_name", length = 60, nullable = false)
+	private String resName;
+	/**
+	 * 资源icon.
+	 */
+	@Column(name = "res_icon", length = 100)
+	private String resIcon;
+	/**
+	 * 资源入口地址.
+	 */
+	@Column(name = "res_url", length = 150)
+	private String resUrl;
+	/**
+	 * 模块描述
+	 */
+	@Column(name = "res_remark", length = 200)
+	private String resRemark;
 	/**
 	 * 资源排序号。<br>
 	 * <strong>提示：</strong>在未指定排序号时，系统将指定默认排序号{@linkplain this#default_sort}。<br>
 	 */
-	@Column(name = "sort", length = 2)
-	private Integer sort;
+	@Column(name = "sequence", length = 2)
+	private Integer sequence;
 	/**
-	 * 模块描述
+	 * 状态标识
 	 */
-	@Column(name = "remark", length = 222)
-	private String remark;
+	@Column(name = "status_id", length = 30, nullable = false)
+	private String statusId;
+
+	public Long getParentId() {
+		return parentId;
+	}
+
+	public void setParentId(Long parentId) {
+		this.parentId = parentId;
+	}
+
+	public String getResType() {
+		return resType;
+	}
+
+	public void setResType(String resType) {
+		this.resType = resType;
+	}
+
+	public String getResCode() {
+		return resCode;
+	}
+
+	public void setResCode(String resCode) {
+		this.resCode = resCode;
+	}
+
+	public String getResName() {
+		return resName;
+	}
+
+	public void setResName(String resName) {
+		this.resName = resName;
+	}
+
+	public String getResIcon() {
+		return resIcon;
+	}
+
+	public void setResIcon(String resIcon) {
+		this.resIcon = resIcon;
+	}
+
+	public String getResUrl() {
+		return resUrl;
+	}
+
+	public void setResUrl(String resUrl) {
+		this.resUrl = resUrl;
+	}
+
+	public String getResRemark() {
+		return resRemark;
+	}
+
+	public void setResRemark(String resRemark) {
+		this.resRemark = resRemark;
+	}
 
 	public Long getId() {
 		return id;
@@ -95,74 +157,24 @@ public class SysResource implements Serializable {
 		this.appId = appId;
 	}
 
-	public String getCode() {
-		return code;
+	public Integer getSequence() {
+		return null == sequence ? default_sort : sequence;
 	}
 
-	public void setCode(String code) {
-		this.code = code;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getIcon() {
-		return icon;
-	}
-
-	public void setIcon(String icon) {
-		this.icon = icon;
-	}
-
-	public String getType() {
-		return type;
-	}
-
-	public void setType(String type) {
-		this.type = type;
-	}
-
-	public String getParent() {
-		return parent;
-	}
-
-	public void setParent(String parent) {
-		this.parent = parent;
-	}
-
-	public String getUrl() {
-		return url;
-	}
-
-	public void setUrl(String url) {
-		this.url = url;
-	}
-
-	public Integer getSort() {
-		if (null == sort) {
-			sort = default_sort;
+	public void setSequence(Integer sequence) {
+		if (null == sequence) {
+			this.sequence = default_sort;
+		} else {
+			this.sequence = sequence;
 		}
-		return sort;
+	}
+	
+	public String getStatusId() {
+		return statusId;
 	}
 
-	public void setSort(Integer sort) {
-		if (null == sort) {
-			sort = default_sort;
-		}
-		this.sort = sort;
-	}
-
-	public String getRemark() {
-		return remark;
-	}
-
-	public void setRemark(String remark) {
-		this.remark = remark;
+	public void setStatusId(String statusId) {
+		this.statusId = statusId;
 	}
 
 }

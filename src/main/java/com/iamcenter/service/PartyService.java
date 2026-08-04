@@ -113,11 +113,15 @@ public class PartyService implements PartyContract {
 		Party party = new Party();
 		party.setAppId(dto.getAppId());
 		party.setPartyTypeId(PartyType.PPERSON.getKey());
+		party.setStatusId(dto.getStatusId());
 		partyDao.save(party);
 
 		PartyPerson person = new PartyPerson();
-		person.setPersonName(dto.getName());
+		person.setCode(dto.getCode());
+		person.setLastName(dto.getName());
+		person.setNickName(dto.getName());
 		person.setIdCard(dto.getIdcard());
+		person.setStatusId(dto.getStatusId());
 		partyPersonDao.save(person);
 
 //		if (null != dto.getPhone()) {
@@ -205,7 +209,7 @@ public class PartyService implements PartyContract {
 //			return vo;
 //		}
 		PersonVO vo = new PersonVO();
-		vo.setRealname(optional.get().getPersonName());
+		vo.setRealname(optional.get().getLastName());
 		return ResultBuilder.normalResult(vo);
 	}
 
@@ -221,9 +225,6 @@ public class PartyService implements PartyContract {
 
 	@Override
 	public PageResult<DepartmentVO> listDepartment(DepartmentListDTO dto) {
-//		if (StringUtils.isBlank(dto.getCompanyId())) {
-//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-//		}
 		return partyBusiness.listDepartment(dto);
 //		return ResultBuilder.buildResult(hy101Repository.findAll().stream().map(mapper -> {
 //			DepartmentVO vo = new DepartmentVO();

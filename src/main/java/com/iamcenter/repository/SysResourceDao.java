@@ -7,14 +7,14 @@ import org.springframework.data.jpa.repository.Query;
 
 import com.iamcenter.domain.security.SysResource;
 
-public interface SysResourceDao extends JpaRepository<SysResource, String> {
+public interface SysResourceDao extends JpaRepository<SysResource, Long> {
 	/**
 	 * 根据资源编码[code]参数查询资源。<br>
 	 * 
 	 * @param code
 	 * @return
 	 */
-	public SysResource findByCode(String code);
+	public SysResource findByResCode(String code);
 	
 	/**
 	 * 根据分类参数查询资源。<br>
@@ -22,11 +22,13 @@ public interface SysResourceDao extends JpaRepository<SysResource, String> {
 	 * @param type
 	 * @return
 	 */
-	public List<SysResource> findByType(String type);
+	public List<SysResource> findByResType(String type);
 	
-	public List<SysResource> findByParent(String parent);
+	public List<SysResource> findByParentId(Long parentId);
 	
-	public List<SysResource> findByTypeAndName(String type, String name);
+	public List<SysResource> findByAppIdAndParentId(String appId, Long parentId);
+	
+	public List<SysResource> findByResTypeAndResName(String type, String name);
 	
 	/**
 	 * 根据资源分类[parent]参数查询资源(按sort升序)。<br>
@@ -34,8 +36,8 @@ public interface SysResourceDao extends JpaRepository<SysResource, String> {
 	 * @param parent 父类标识。<br>
 	 * @return
 	 */
-	//@Query(value = "select * from sys_resource where parent =? order by sort asc", nativeQuery = true)
-	public List<SysResource> findByParentOrderBySortAsc(String parent);
+	//@Query(value = "select * from sys_resource where parent =? order by sequence asc", nativeQuery = true)
+	public List<SysResource> findByParentIdOrderBySequenceAsc(Long parentId);
 	
 	/**
 	 * 根据资源分类[parent]参数查询资源(按sort降序)。<br>
@@ -43,8 +45,8 @@ public interface SysResourceDao extends JpaRepository<SysResource, String> {
 	 * @param parent 父类标识。<br>
 	 * @return
 	 */
-	//@Query(value = "select * from sys_resource where parent =? order by sort desc", nativeQuery = true)
-	public List<SysResource> findByParentOrderBySortDesc(String parent);
+	//@Query(value = "select * from sys_resource where parent =? order by sequence desc", nativeQuery = true)
+	public List<SysResource> findByParentIdOrderBySequenceDesc(Long parentId);
 	
 	/**
 	 * 根据资源分类[type]参数查询资源(默认按sort升序)。<br>
@@ -52,7 +54,7 @@ public interface SysResourceDao extends JpaRepository<SysResource, String> {
 	 * @param type 资源分类。<br>
 	 * @return
 	 */
-	@Query(value = "select * from sys_resource where type =? order by sort", nativeQuery = true)
+	@Query(value = "select * from sys_resource where type =? order by sequence", nativeQuery = true)
 	public List<SysResource> selectResource(String type);
 	
 }

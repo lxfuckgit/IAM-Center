@@ -16,9 +16,6 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "HY102")
 public class PartyPerson extends Party implements Serializable {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	/**
@@ -28,29 +25,29 @@ public class PartyPerson extends Party implements Serializable {
 	private String code;
 
 	/**
-	 * 用户姓名
-	 */
-	@Column(name = "xm", length = 15)
-	private String personName;
-
-	/**
 	 * 姓氏
 	 */
 	@Column(name = "first_name", length = 20)
 	private String firstName;
-	
+
 	/**
 	 * 名字
 	 */
 	@Column(name = "last_name", length = 20)
 	private String lastName;
-	
+
+	/**
+	 * 用户姓名
+	 */
+	@Column(name = "nick_name", length = 15)
+	private String nickName;
+
 	/**
 	 * 用户性别(F/M).
 	 */
 	@Column(name = "xb", length = 1)
 	private char sex;
-	
+
 	/**
 	 * 用户生日
 	 */
@@ -86,21 +83,13 @@ public class PartyPerson extends Party implements Serializable {
 //	 */
 //	@Column(name = "email", length = 30)
 //	private String email;
-	
+
 	public String getCode() {
 		return code;
 	}
 
 	public void setCode(String code) {
 		this.code = code;
-	}
-
-	public String getPersonName() {
-		return personName;
-	}
-
-	public void setPersonName(String personName) {
-		this.personName = personName;
 	}
 
 	public String getFirstName() {
@@ -117,6 +106,14 @@ public class PartyPerson extends Party implements Serializable {
 
 	public void setLastName(String lastName) {
 		this.lastName = lastName;
+	}
+
+	public String getNickName() {
+		return nickName;
+	}
+
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
 	}
 
 	public char getSex() {
@@ -186,5 +183,5 @@ public class PartyPerson extends Party implements Serializable {
 	public static long getSerialversionuid() {
 		return serialVersionUID;
 	}
-	
+
 }

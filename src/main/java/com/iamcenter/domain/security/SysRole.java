@@ -45,6 +45,11 @@ public class SysRole extends TopBaseDomain implements Serializable {
 	@Column(name = "role_name", length = 50, nullable = false)
 	private String name;
 	/**
+	 * 角色状态
+	 */
+	@Column(name = "status_id", length = 10, nullable = false)
+	private String statusId;
+	/**
 	 * 角色备注/角色描述
 	 */
 	@Column(name = "role_remark", length = 100)
@@ -55,7 +60,7 @@ public class SysRole extends TopBaseDomain implements Serializable {
 	@ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.MERGE)
 	@JoinTable(name = "sys_role_resource", joinColumns = {
 			@jakarta.persistence.JoinColumn(name = "role_id", table = "sys_role") }, inverseJoinColumns = {
-					@jakarta.persistence.JoinColumn(name = "respirce_id", table = "sys_resource") })
+					@jakarta.persistence.JoinColumn(name = "resource_id", table = "sys_resource") })
 	private Set<SysResource> resources;
 //	<!--映射集合属性，t_role_privilege是连接表表名 -->
 //	<set name="privilege" table="sys_role_privilege">
@@ -106,6 +111,14 @@ public class SysRole extends TopBaseDomain implements Serializable {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	public String getStatusId() {
+		return statusId;
+	}
+
+	public void setStatusId(String statusId) {
+		this.statusId = statusId;
 	}
 
 	public String getRemark() {
