@@ -1,7 +1,9 @@
 package com.iamcenter.config.jwt;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.SecretKey;
@@ -9,10 +11,14 @@ import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -107,7 +113,15 @@ public class JwtUtil {
 	 * @throws JwtException 如果 Token 无效或过期
 	 */
 	public Claims parseToken(String token) {
-		return Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token).getPayload();
+		try {
+			return Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token).getPayload();
+		} catch (ExpiredJwtException e1) {
+			logger.error("--->token expired exception:{}", e1.getMessage());
+			return null;
+		} catch (JwtException | IllegalArgumentException e2) {
+			logger.error("--->token illegal exception:{}", e2.getMessage());
+			return null;
+		}
 	}
 
 	/**
@@ -117,13 +131,30 @@ public class JwtUtil {
 	 * @return true-有效，false-无效
 	 */
 	public boolean validateToken(String token) {
-		try {
-			parseToken(token);
+		if (null != parseToken(token)) {
 			return true;
-		} catch (JwtException | IllegalArgumentException e) {
-			// 可以在这里记录日志
-			logger.error("--->token validate exception:{}", e.getMessage());
+		} else {
 			return false;
+		}
+	}
+
+	public boolean validateTokenV2(String token) {
+		Claims claims = parseToken(token);
+		if (null == claims) {
+			return false;
+		}
+		Date expiration = claims.getExpiration();
+		Date now = new Date();
+		if (expiration.before(now)) {
+			logger.warn("--->Token令牌已过期！");
+			return false;
+		} else {
+			// 设置authentication
+			List<org.springframework.security.core.GrantedAuthority> authorities = new ArrayList<>();
+			authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+			UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+			return true;
 		}
 	}
 
@@ -140,6 +171,14 @@ public class JwtUtil {
 	public String extractAppId(String token) {
 		return parseToken(token).get("appId", String.class);
 	}
+	
+	/**
+	 * 检查 Token 是否过期（内部方法，用于自定义场景）
+	 */
+//	public boolean isTokenExpired(String token) {
+//		Date expiration = parseToken(token).getExpiration();
+//		return expiration.before(new Date());
+//	}
 
 	/**
 	 * 获取签名密钥（从配置的 secret 字符串生成）
@@ -149,14 +188,6 @@ public class JwtUtil {
 //		return Keys.hmacShaKeyFor(keyBytes);
 		// 直接取公共的secretKey（不用每次生成）
 		return secretKey;
-	}
-
-	/**
-	 * 检查 Token 是否过期（内部方法，用于自定义场景）
-	 */
-	public boolean isTokenExpired(String token) {
-		Date expiration = parseToken(token).getExpiration();
-		return expiration.before(new Date());
 	}
 
 }
