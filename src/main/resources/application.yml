@@ -4,6 +4,8 @@ server:
 spring:
   profiles:
     active: test
+  application:
+    name: IAM-Center
 
 logging:
   level:
@@ -22,4 +24,4 @@ logging:
 
 config:
   auth:
-    ignoreUrls: /iam/pwdLogin.php,/iam/pwdRegister.php,/iam/auth/logout.php
+    ignoreUrls: /iam/pwdLogin.php,/iam/pwdLogin.php,/iam/pwdRegister.php,/iam/smsRegister.php
