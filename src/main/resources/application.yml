@@ -6,6 +6,9 @@ spring:
     active: test
   application:
     name: IAM-Center
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss  # 设置全局日期格式化模板
 
 logging:
   level:
