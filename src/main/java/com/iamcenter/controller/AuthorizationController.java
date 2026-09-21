@@ -44,93 +44,93 @@ public class AuthorizationController {
 	@Autowired
 	private SysLoginRoleDao sysLoginRoleDao;
 	
-	@RequestMapping("addRole.php")
+	@RequestMapping("addRole")
 	public RstResult<String> addRole(@RequestBody RoleDTO dto) {
 		return securityService.addRole(dto);
 	}
 	
-	@RequestMapping("deleteRole.php")
+	@RequestMapping("deleteRole")
 	public RstResult<String> deleteRole(@RequestBody RoleDeleteDTO dto) {
 		return securityService.deleteRole(dto);
 	}
 	
-	@RequestMapping("getRole.php")
+	@RequestMapping("getRole")
 	public RstResult<RoleVO> getRole(@RequestBody RoleDeleteDTO dto) {
 		return securityService.getRole(dto);
 	}
 	
-	@RequestMapping("updateRole.php")
+	@RequestMapping("updateRole")
 	public RstResult<String> updateRole(@RequestBody RoleUpdateDTO dto) {
 		return securityService.updateRole(dto);
 	}
 	
-	@RequestMapping("listRole.php")
+	@RequestMapping("listRole")
 	public PageResult<RoleVO> listRole(@RequestBody RoleListDTO dto) {
 		return securityService.listRole(dto);
 	}
 
-	@PostMapping(value = "/addLoginRole.php")
+	@PostMapping(value = "/addLoginRole")
 	public RstResult<Boolean> addLoginRole(@RequestBody LoginRoleDTO dto) {
 		return securityService.addLoginRole(dto.getAppId(), dto.getLoginId(), dto.getRoleId());
 	}
 
-	@PostMapping(value = "/removeLoginRole.php")
+	@PostMapping(value = "/removeLoginRole")
 	public RstResult<String> removeLoginRole(@RequestBody LoginRoleDTO dto) {
 		securityService.removeLoginRole(dto.getAppId(), dto.getLoginId(), dto.getRoleId());
 		return ResultBuilder.normalResult();
 	}
 	
-	@PostMapping(value = "/createResource.php")
+	@PostMapping(value = "/createResource")
 	public RstResult<String> addResource(@RequestBody ResourceCreateDTO dto) {
 		return securityService.createResource(dto);
 	}
 	
-	@PostMapping(value = "/deleteResource.php")
+	@PostMapping(value = "/deleteResource")
 	public RstResult<String> deleteResource(@RequestBody ResourceDeleteDTO dto) {
 		return securityService.deleteResource(dto);
 	}
 	
-	@PostMapping(value = "/updateResource.php")
+	@PostMapping(value = "/updateResource")
 	public RstResult<String> updateResource(@RequestBody ResourceUpdateDTO dto) {
 		return securityService.updateResource(dto);
 	}
 	
-	@RequestMapping("/listResource.php")
+	@RequestMapping("/listResource")
 	public PageResult<ResourceVO> listResource(@RequestBody ResourceListDTO dto) {
 		return securityService.listResource(dto);
 	}
 	
-	@RequestMapping("/treeResource.php")
+	@RequestMapping("/treeResource")
 	public RstResult<List<TreeVO>> treePrivilege(@RequestBody ResourceListDTO dto) {
 		return securityService.treeResource(dto);
 	}
 	
-	@PostMapping("/listRoleResourceIds.php")
+	@PostMapping("/listRoleResourceIds")
 	public RstResult<List<Long>> listRoleResourceIds(@RequestBody RoleResourceUpdateDTO dto) {
 		return securityService.listRoleResourceIds(dto.getAppId(), dto.getRoleId());
 	}
 	
-	@PostMapping("/restoreRoleResourceList.php")
+	@PostMapping("/restoreRoleResourceList")
 	public RstResult<Boolean> restoreRoleResourceList(@RequestBody RoleResourceUpdateDTO dto) {
 		return securityService.restoreRoleResources(dto.getAppId(), dto.getRoleId(),dto.getResourceIdList());
 	}
 	
-	@PostMapping("grantRolePrivilege.php")
+	@PostMapping("grantRolePrivilege")
 	public RstResult<Boolean> grantRolePrivilege(@RequestBody RoleResourceUpdateDTO dto) {
 		return securityService.grantRolePrivilege(dto.getAppId(), dto.getRoleId(), dto.getResourceIdList());
 	}
 
-	@PostMapping("revokeRolePrivilege.php")
+	@PostMapping("revokeRolePrivilege")
 	public RstResult<Boolean> revokeRolePrivilege(@RequestBody RoleResourceUpdateDTO dto) {
 		return securityService.revokeRolePrivilege(dto.getAppId(), dto.getRoleId(), dto.getResourceIdList());
 	}
 	
-	@RequestMapping("listLogin.php")
+	@RequestMapping("listLogin")
 	public PageResult<LoginListVO> listLogin(@RequestBody LoginListDTO dto) {
 		return securityService.listLogin(dto);
 	}
 	
-	@PostMapping("/listLoginRoleIds.php")
+	@PostMapping("/listLoginRoleIds")
 	public RstResult<List<Long>> listLoginRoleIds(@RequestBody LoginRoleUpdateDTO dto) {
 		List<Long> roleIdList = sysLoginRoleDao.findByLoginId(dto.getLoginId()).stream().map(mapper -> {
 			return mapper.getRoleId();
@@ -138,7 +138,7 @@ public class AuthorizationController {
 		return ResultBuilder.normalResult(roleIdList);
 	}
 	
-	@PostMapping("/restoreLoginRoles.php")
+	@PostMapping("/restoreLoginRoles")
 	public RstResult<Boolean> restoreLoginRoles(@RequestBody LoginRoleUpdateDTO dto) {
 		return securityService.restoreLoginRoles(dto.getAppId(), dto.getLoginId(), dto.getRoleIdList());
 	}
