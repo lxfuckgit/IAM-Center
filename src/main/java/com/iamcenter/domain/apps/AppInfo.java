@@ -14,8 +14,8 @@ public class AppInfo extends TopBaseDomain {
 	 * 应用标识
 	 */
 	@Id
-	@Column(name = "app_id", length = 32)
-	private String appId;
+	@Column(name = "app_id")
+	private Long appId;
 	/**
 	 * 应用编号
 	 */
@@ -42,11 +42,11 @@ public class AppInfo extends TopBaseDomain {
 	@Column(name = "app_contact", length = 32)
 	private String appContact;
 
-	public String getAppId() {
+	public Long getAppId() {
 		return appId;
 	}
 
-	public void setAppId(String appId) {
+	public void setAppId(Long appId) {
 		this.appId = appId;
 	}
 

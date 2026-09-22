@@ -2,6 +2,7 @@ package com.iamcenter.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.service.AppInfoService;
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.RstResult;
+import com.javapai.framework.common.dto.AppBaseDTO;
 import com.saasapi.contract.apps.dto.AppListDTO;
 import com.saasapi.contract.apps.enums.OSEnum;
 import com.saasapi.contract.apps.vo.AppUpgrade;
@@ -70,6 +72,7 @@ public class ApplicationController {
 	 * @param dto
 	 * @return
 	 */
+	@PreAuthorize("hasRole('super_admin')")
 	@RequestMapping("listAppInfo.php")
 	public PageResult<AppInfo> listAppInfo(@RequestBody AppListDTO dto) {
 		return appsService.listAppInfo(dto);
@@ -81,6 +84,7 @@ public class ApplicationController {
 	 * @param dto
 	 * @return
 	 */
+	@PreAuthorize("hasRole('super_admin')")
 	@RequestMapping("addAppInfo.php")
 	public RstResult<String> addAppInfo(@RequestBody AppInfo dto) {
 		return appsService.addAppInfo(dto);
@@ -93,7 +97,7 @@ public class ApplicationController {
 	 * @return
 	 */
 	@RequestMapping("getAppInfo.php")
-	public RstResult<com.saasapi.contract.apps.vo.AppInfo> getAppInfo(@RequestBody AppInfo dto) {
+	public RstResult<com.saasapi.contract.apps.vo.AppInfo> getAppInfo(@RequestBody AppBaseDTO dto) {
 		return appsService.getAppInfo(dto.getAppId());
 	}
 
@@ -103,6 +107,7 @@ public class ApplicationController {
 	 * @param dto
 	 * @return
 	 */
+	@PreAuthorize("hasRole('super_admin')")
 	@RequestMapping("updateAppInfo.php")
 	public RstResult<String> updateAppInfo(@RequestBody AppInfo dto) {
 		return appsService.updateAppInfo(dto);
@@ -114,6 +119,7 @@ public class ApplicationController {
 	 * @param dto
 	 * @return
 	 */
+	@PreAuthorize("hasRole('super_admin')")
 	@RequestMapping("changeAppStatus.php")
 	public RstResult<String> changeAppStatus(@RequestBody ChangeAppStatusDTO dto) {
 		return appsService.changeAppStatus(dto);

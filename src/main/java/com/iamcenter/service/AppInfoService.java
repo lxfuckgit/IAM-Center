@@ -4,13 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.iamcenter.business.SecurityBusiness;
+import com.iamcenter.constant.Constant;
 import com.iamcenter.controller.dto.ChangeAppStatusDTO;
 import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.domain.apps.AppUpdate;
+import com.iamcenter.domain.security.SysLogin;
+import com.iamcenter.domain.security.SysRole;
+import com.iamcenter.repository.SysRoleRepository;
+import com.iamcenter.repository.apps.AppInfoRepository;
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
@@ -25,6 +36,16 @@ import com.saasapi.contract.apps.vo.AppUpgrade;
 
 @Service
 public class AppInfoService extends AbstractBizService implements AppsContract {
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	@Autowired
+	AppInfoRepository appInfoRepository;
+	
+	@Autowired
+	SysRoleRepository sysRoleRepository;
+	
+	@Autowired
+	SecurityBusiness securityBusiness;
 
 	@Override
 	public RstResult<com.saasapi.contract.apps.vo.AppInfo> getAppInfo(String appId) {
@@ -107,21 +128,37 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 	/**
 	 * 应用注册。<br>
 	 */
+	@Transactional
 	public RstResult<String> addAppInfo(AppInfo dto) {
 		if (StringUtils.isBlank(dto.getAppCode()) || StringUtils.isBlank(dto.getAppName())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
 		// 校验应用编号唯一
-		String checkSQL = "select count(1) from app_info where app_code=?";
-		Integer count = jdbcTemplate.queryForObject(checkSQL, Integer.class, dto.getAppCode());
-		if (null != count && count > 0) {
+		if (appInfoRepository.existsByAppCode(dto.getAppCode())) {
 			return ResultBuilder.buildResult("40000002", "应用编号已存在!");
 		}
 		// 应用标识为空时自动生成
 		String appId = String.valueOf(System.currentTimeMillis());
 		String appStatus = StatusEnum.ENABLE.name();
 		String updateSQL = "insert into app_info (app_id, app_code, app_name, app_status, app_provider, app_contact) values (?, ?, ?, ?, ?, ?)";
-		jdbcTemplate.update(updateSQL, appId, dto.getAppCode(), dto.getAppName(), appStatus, dto.getAppProvider(), dto.getAppContact());
+		int r1 = jdbcTemplate.update(updateSQL, appId, dto.getAppCode(), dto.getAppName(), appStatus, dto.getAppProvider(), dto.getAppContact());
+		logger.info("--->应用（{})创建结果：{}", dto.getAppName(), r1);
+		// 生成应用的管理员角色
+		SysRole userRole = new SysRole();
+		userRole.setAppId(appId);
+		userRole.setCode(dto.getAppCode());
+		userRole.setName("管理员");
+		userRole.setStatusId(StatusEnum.ENABLE.getValue());
+		userRole.setCreatorId(SecurityContextHolder.getContext().getAuthentication().getName());
+		sysRoleRepository.save(userRole);
+		// 生成应用的管理员账号（提示：电话当登录账号可能会重复）
+		SysLogin userLogin = new SysLogin();
+		userLogin.setAppId(appId);
+		userLogin.setLoginName(dto.getAppCode());
+		userLogin.setLoginPwd(Constant.DEFAULT_PWD);
+		userLogin.setVersion(Constant.DEFAULT_VERSION);
+		RstResult<String> r2 = securityBusiness.doRegister(userLogin, List.of(String.valueOf(userRole.getId())));
+		logger.info("--->应用管理员创建结果：{}", dto.getAppName(), r2.getCode());
 		return ResultBuilder.normalResult();
 	}
 
@@ -129,7 +166,7 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 	 * 应用修改。<br>
 	 */
 	public RstResult<String> updateAppInfo(AppInfo dto) {
-		if (StringUtils.isBlank(dto.getAppId())) {
+		if (null == dto.getAppId()) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
 		Integer count = jdbcTemplate.queryForObject("select count(1) from app_info where app_id=?", Integer.class,
