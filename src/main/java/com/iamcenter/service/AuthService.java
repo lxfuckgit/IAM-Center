@@ -12,10 +12,12 @@ import org.springframework.validation.annotation.Validated;
 
 import com.iamcenter.business.SecurityBusiness;
 import com.iamcenter.constant.Constant;
+import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysPwdHistory;
 import com.iamcenter.repository.PwdHistoryRepository;
 import com.iamcenter.repository.SysLoginRepository;
+import com.iamcenter.repository.apps.AppInfoRepository;
 import com.iamcenter.strategy.EncoderStrategy;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
@@ -45,7 +47,6 @@ import java.util.regex.Pattern;
 
 @DubboService
 public final class AuthService implements AuthContract {
-	/**/
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	// @Autowired
@@ -67,6 +68,9 @@ public final class AuthService implements AuthContract {
 	
 	@Autowired
 	private EncoderStrategy encoderStrategy;
+	
+	@Autowired
+	AppInfoRepository appInfoRepository;
 
 	@Value("${is.sms.fake:1}")
 	private String isSmsFake = "1";// 考虑用loginNameFake和LoginPwdFake代替.
@@ -79,14 +83,19 @@ public final class AuthService implements AuthContract {
 
 	@Override
 	public RstResult<String> register(RegPwdDTO dto) {
-		if (StringUtils.isEmpty(dto.getAppId())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return checkAppResult;
 		}
 		if (StringUtils.isBlank(dto.getUsername()) || StringUtils.isBlank(dto.getPassword())) {
 			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
 		}
 		if (StringUtils.isEmpty(dto.getVersion())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_VERISON);
+		}
+		if (securityBusiness.checkloginName(dto.getAppId(), dto.getUsername())) {
+			logger.error("----------->当前用户注册名{}已存在，请更换注册用户名!", dto.getUsername());
+			return ResultBuilder.buildResult(ErrorCode.EXIST_USER);
 		}
 		if (securityBusiness.checkloginName(dto.getAppId(), dto.getUsername())) {
 			logger.error("----------->当前用户注册名{}已存在，请更换注册用户名!", dto.getUsername());
@@ -104,16 +113,16 @@ public final class AuthService implements AuthContract {
 		entity.setLoginPwd(dto.getPassword());
 		entity.setVersion(dto.getVersion());
 		entity.setNickName(dto.getNickName());
-		Long loginId = securityBusiness.doRegister(entity, dto.getRoleList());
-		if (loginId > 0) {
-			return ResultBuilder.normalResult(String.valueOf(entity.getLoginId()));
-		} else {
-			return ResultBuilder.buildResult(ErrorCode.ERROR_REGISTER);
-		}
+		return securityBusiness.doRegister(entity, dto.getRoleList());
 	}
 
 	@Override
 	public RstResult<String> register(RegSmsDTO dto) {
+		// 验证应用标识
+		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return checkAppResult;
+		}
 		// 验证手机号(用户名)
 		if (StringUtils.isEmpty(dto.getPhone())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_PHONE);
@@ -121,10 +130,6 @@ public final class AuthService implements AuthContract {
 		// 验证验证码
 		if (StringUtils.isEmpty(dto.getValidCode())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_CAPTCHA);
-		}
-		// 根据应用标识
-		if (StringUtils.isEmpty(dto.getAppId())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
 		// 验证版本号
 		if (StringUtils.isEmpty(dto.getVersion())) {
@@ -220,8 +225,9 @@ public final class AuthService implements AuthContract {
 	 */
 	@Override
 	public RstResult<LoginVO> userLogin(PwdLoginDTO dto) {
-		if (StringUtils.isEmpty(dto.getAppId())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return ResultBuilder.buildResult(checkAppResult.getCode(), checkAppResult.getMessage());
 		}
 		if (StringUtils.isEmpty(dto.getUsername())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_USERNAME);
@@ -255,6 +261,10 @@ public final class AuthService implements AuthContract {
 		 */
 
 		/* 验证必要参数 */
+		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return ResultBuilder.buildResult(checkAppResult.getCode(), checkAppResult.getMessage());
+		}
 		if (StringUtils.isEmpty(dto.getUsername())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_CHANNEL);
 		}
@@ -467,7 +477,7 @@ public final class AuthService implements AuthContract {
 		// } else {
 		// userAuthBusiness.deleteUserSessionByCode(dto.getToken());
 		// logger.debug(">>>>>>用户授权码过期!请重新登录!");
-		return ResultBuilder.buildResult(ErrorCode.ERROR_TOKEN_EXPIRE);
+		return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
 		// }
 		//
 		// return
@@ -559,19 +569,6 @@ public final class AuthService implements AuthContract {
 	}
 
 	/**
-	 * 注册登录账号(随机密码)。<br>
-	 * 
-	 * @param appId     应用标识。<br>
-	 * @param loginName 登录账号。<br>
-	 * @param version   app版本号.<br>
-	 * 
-	 * @return {@link SecurityBusiness#doRegister(String, String, String, String)}。<br>
-	 */
-	private RstResult<String> doRegister(String appId, String loginName, String version) {
-		return doRegister(appId, loginName, Constant.DEFAULT_PWD, version);
-	}
-
-	/**
 	 * 注册登录账号(指定密码)。<br>
 	 * 
 	 * @param appId     应用标识。<br>
@@ -621,6 +618,27 @@ public final class AuthService implements AuthContract {
 	@Override
 	public Long getLoginIdByToken(String appId, String token) {
 		return securityBusiness.getLoginIdByToken(appId, token);
+	}
+	
+	
+	/**
+	 * 检查当前登录账号的应用的可用性。<br>
+	 *
+	 * @param appId 应用标识。<br>
+	 * 
+	 */
+	public RstResult<String> checkLoginAppId(Long appId) {
+		if (null == appId || appId == 0L) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		AppInfo appInfo = appInfoRepository.findByAppId(appId);
+		if (null == appInfo) {
+			return ResultBuilder.buildResult("40000002", "应用标识不存在!");
+		}
+		if (!appInfo.getAppStatus().equals(StatusEnum.ENABLE.getValue())) {
+			return ResultBuilder.buildResult("40000003", "此应用已被停用!");
+		}
+		return ResultBuilder.normalResult();
 	}
 
 }
