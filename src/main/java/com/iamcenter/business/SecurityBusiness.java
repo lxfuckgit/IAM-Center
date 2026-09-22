@@ -2,6 +2,7 @@ package com.iamcenter.business;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -23,8 +24,10 @@ import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.constant.Constant;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
+import com.iamcenter.domain.security.SysRole;
 import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.SysLoginRoleDao;
+import com.iamcenter.repository.SysRoleRepository;
 import com.iamcenter.strategy.EncoderStrategy;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
@@ -43,6 +46,9 @@ public class SecurityBusiness {
 	
 	@Autowired
 	private SysLoginRepository sysLoginRepository;
+	
+	@Autowired
+	SysRoleRepository sysRoleDao;
 	
 	@Autowired
 	private SysLoginRoleDao sysLoginRoleDao;
@@ -207,45 +213,48 @@ public class SecurityBusiness {
 	 * 
 	 * @param loginInfo 注册信息。<br>
 	 */
-	public long doRegister(SysLogin loginInfo) {
+	public RstResult<String> doRegister(SysLogin loginInfo) {
 		return doRegister(loginInfo, null);
 	}
 	
 	/**
-	 * 注册登录账号(指定密码)。<br>
 	 * 
-	 * @param appId
-	 *            应用标识。<br>
-	 * @param loginName
-	 *            登录账号。<br>
-	 * @param loginPwd
-	 *            登录密码（明文）。<br>
-	 * @param version
-	 *            app版本号.<br>
+	 * @param loginInfo  登录信息。<br>
+	 * @param loginRoles 角色信息。<br>
 	 * @return 返回用户标识（当用户标识等于0时，代表注册失败）。<br>
-	 * 
 	 */
-	public long doRegister(SysLogin loginInfo, List<String> loginRole) {
+	public RstResult<String> doRegister(SysLogin loginInfo, List<String> loginRoles) {
 		logger.info("--->正在创建用户(appId={} loginName={})登录信息!", loginInfo.getAppId(), loginInfo.getLoginName());
+
+		/* 1、验证角色有效性 */
+		if (null != loginRoles) {
+			for (String roleId : loginRoles) {
+				Optional<SysRole> optional = sysRoleDao.findById(Long.valueOf(roleId));
+				if (!optional.isPresent() || !optional.get().getAppId().equals(loginInfo.getAppId())) {
+					logger.warn("--->当前应用[{}]关联角色[{}]有误！", loginInfo.getAppId(), roleId);
+					return ResultBuilder.buildResult(ErrorCode.ERROR_REGISTER);
+				}
+			}
+		}
+		
+		/* 2、保存注册信息 */
 		// 注册用户密码加密
 		loginInfo.setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, loginInfo.getLoginPwd()));
 		// 注册用户登录状态：INIT
 		loginInfo.setLoginState(StatusEnum.ENABLE.name());
 		sysLoginRepository.save(loginInfo);
 		logger.info("--->当前登录账号(loginName={})已注册完成!", loginInfo.getLoginName());
-
-		/* 1、注册结果检查 */
 		if (loginInfo.getLoginId() <= 0) {
 			// EE.logEvent("Service", "userRegister");
 			// trans.setStatus(new BizException(ErrorCode.REGISTER_ERROR));
 			// trans.complete();
-			// logger.error("---------->账号注册异常:{}"+ex.getLocalizedMessage());
-			return 0l;
+			logger.error("--->{}账号注册异常！" + loginInfo.getLoginName());
+			return ResultBuilder.buildResult(ErrorCode.ERROR_REGISTER);
 		}
 
-		/* 2、关联角色设置 */
-		if (null != loginRole) {
-			loginRole.forEach(roleId -> {
+		/* 3、关联角色设置 */
+		if (null != loginRoles) {
+			loginRoles.forEach(roleId -> {
 				sysLoginRoleDao.save(new SysLoginRole(loginInfo.getLoginId(), Long.valueOf(roleId)));
 			});
 			logger.info("--->当前登录账户（{}）的角色分配完毕！", loginInfo.getLoginId());
@@ -263,7 +272,7 @@ public class SecurityBusiness {
 		// data.put("remoteIp", bo.getDeviceIp());
 		// data.put("addChannel", bo.getAppChannel());
 		// commonFields.put("addProduct", "uzone");
-		return loginInfo.getLoginId();
+		return ResultBuilder.normalResult(String.valueOf(loginInfo.getLoginId()));
 	}
 	
 	public RstResult<LoginVO> doLogin(SysLogin login) {
