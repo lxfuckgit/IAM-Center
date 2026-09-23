@@ -11,13 +11,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 
 import com.iamcenter.business.SecurityBusiness;
+import com.iamcenter.business.ValidateBusiness;
 import com.iamcenter.constant.Constant;
-import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysPwdHistory;
 import com.iamcenter.repository.PwdHistoryRepository;
 import com.iamcenter.repository.SysLoginRepository;
-import com.iamcenter.repository.apps.AppInfoRepository;
 import com.iamcenter.strategy.EncoderStrategy;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
@@ -70,7 +69,7 @@ public final class AuthService implements AuthContract {
 	private EncoderStrategy encoderStrategy;
 	
 	@Autowired
-	AppInfoRepository appInfoRepository;
+	ValidateBusiness validateBusiness;
 
 	@Value("${is.sms.fake:1}")
 	private String isSmsFake = "1";// 考虑用loginNameFake和LoginPwdFake代替.
@@ -83,7 +82,7 @@ public final class AuthService implements AuthContract {
 
 	@Override
 	public RstResult<String> register(RegPwdDTO dto) {
-		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(dto.getAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return checkAppResult;
 		}
@@ -119,7 +118,7 @@ public final class AuthService implements AuthContract {
 	@Override
 	public RstResult<String> register(RegSmsDTO dto) {
 		// 验证应用标识
-		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(dto.getAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return checkAppResult;
 		}
@@ -225,7 +224,7 @@ public final class AuthService implements AuthContract {
 	 */
 	@Override
 	public RstResult<LoginVO> userLogin(PwdLoginDTO dto) {
-		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(dto.getAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return ResultBuilder.buildResult(checkAppResult.getCode(), checkAppResult.getMessage());
 		}
@@ -261,7 +260,7 @@ public final class AuthService implements AuthContract {
 		 */
 
 		/* 验证必要参数 */
-		RstResult<String> checkAppResult = checkLoginAppId(Long.valueOf(dto.getAppId()));
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(dto.getAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return ResultBuilder.buildResult(checkAppResult.getCode(), checkAppResult.getMessage());
 		}
@@ -621,24 +620,4 @@ public final class AuthService implements AuthContract {
 	}
 	
 	
-	/**
-	 * 检查当前登录账号的应用的可用性。<br>
-	 *
-	 * @param appId 应用标识。<br>
-	 * 
-	 */
-	public RstResult<String> checkLoginAppId(Long appId) {
-		if (null == appId || appId == 0L) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
-		}
-		AppInfo appInfo = appInfoRepository.findByAppId(appId);
-		if (null == appInfo) {
-			return ResultBuilder.buildResult("40000002", "应用标识不存在!");
-		}
-		if (!appInfo.getAppStatus().equals(StatusEnum.ENABLE.getValue())) {
-			return ResultBuilder.buildResult("40000003", "此应用已被停用!");
-		}
-		return ResultBuilder.normalResult();
-	}
-
 }
