@@ -16,9 +16,18 @@ public interface SysLoginRoleDao extends JpaRepository<SysLoginRole, String> {
 	public List<Object[]> listLoginRole(Long loginId);
 	
 	@Query(value = "select b.role_code from sys_login_role a left join sys_role b on a.role_id=b.id where a.login_id=?1", nativeQuery = true)
-	public List<String> listLoginRoleCode(Long loginId);
+	public List<String> listRoleCodeByLoginId(Long loginId);
 
 //	@Query(value = "delete from sys_login_role where login_id=?1 and role_id=?2", nativeQuery = true)
 	public int deleteByLoginIdAndRoleId(Long loginId, Long roleId);
+	
+	/**
+	 * 检查【登录标识】是否具有指定的【超管角色】
+	 * 
+	 * @param loginId
+	 * @return
+	 */
+	@Query(value = "select count(1) from sys_login_role a left join sys_role b on a.role_id=b.id where a.login_id=? and b.role_code='super_admin'", nativeQuery = true)
+	Long countLoginRole(Long loginId);
 	
 }

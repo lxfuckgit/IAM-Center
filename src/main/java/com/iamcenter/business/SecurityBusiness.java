@@ -113,25 +113,9 @@ public class SecurityBusiness {
 			return false;
 		}
 	}
-
-	/**
-	 * 注册登录账号(随机密码)。<br>
-	 * 
-	 * @param appId
-	 *            应用标识。<br>
-	 * @param loginName
-	 *            登录账号。<br>
-	 * @param version
-	 *            app版本号.<br>
-	 * 
-	 * @return {@link SecurityBusiness#doRegister(String, String, String, String)}。<br>
-	 */
-	public long doRegister(String appId, String loginName, String version) {
-		return doRegister(appId, loginName, Constant.DEFAULT_PWD, version);
-	}
 	
 	/**
-	 * 微信账号三方联机注册登录。
+	 * 三方账号(例如微信登录）注册登录。
 	 * 
 	 * @param appId       应用标识。<br>
 	 * @param extLoginId  三方用户标识（例如：微信的openId开放标识)。<br>
@@ -160,52 +144,65 @@ public class SecurityBusiness {
 	}
 	
 	/**
+	 * 注册登录账号(默认密码)。<br>
+	 * 
+	 * @param appId     应用标识。<br>
+	 * @param loginName 登录账号。<br>
+	 * @param version   应用版本号。<br>
+	 * 
+	 * @return {@link SecurityBusiness#doRegister(String, String, String, String)}。<br>
+	 */
+	public RstResult<String> doRegister(String appId, String loginName, String version) {
+		return doRegister(appId, loginName, Constant.DEFAULT_PWD, version);
+	}
+
+	/**
 	 * 注册登录账号(指定密码)。<br>
 	 * 
-	 * @param appId
-	 *            应用标识。<br>
-	 * @param loginName
-	 *            登录账号。<br>
-	 * @param loginPwd
-	 *            登录密码（明文）。<br>
-	 * @param version
-	 *            app版本号.<br>
+	 * @param appId     应用标识。<br>
+	 * @param loginName 登录账号。<br>
+	 * @param loginPwd  登录密码（明文）。<br>
+	 * @param version   应用版本号。<br>
 	 * @return 返回用户标识（当用户标识等于0时，代表注册失败）。<br>
 	 * 
 	 */
-	public long doRegister(String appId, String loginName, String loginPwd, String version) {
-		logger.info("----------->正在创建用户({})登录信息!", loginName);
+	public RstResult<String> doRegister(String appId, String loginName, String loginPwd, String version) {
 		SysLogin entity = new SysLogin();
 		entity.setAppId(appId);
 		entity.setLoginName(loginName);
 		entity.setLoginPwd(DigestUtils.md5Hex(loginPwd));
 		entity.setVersion(version);
 //		entity.setCreateTime(new java.sql.Timestamp(System.currentTimeMillis()));//我也不晓得为什么非要手工设置，先临时处理。
-		sysLoginRepository.save(entity);
-		logger.info("----------->登录账号({})已进行注册完成!", loginName);
-		/* TODO:注册后续业务事件.如注册积分、注册送券...... */
-
-		if (entity.getLoginId() > 0) {
-			// trans.complete();
-			// 登录埋点(还有很多信息没有存到登录表中，设计上考虑这些属性没有必要与业务数据表绑定，所有独立埋点存储)
-			// EE.logEvent(dto.toString);
-			// Map<String, Object> data = new HashMap<String, Object>();
-			// data.put("downloadChannel", "app");
-			// data.put("regChannel", bo.getAppChannel());
-			// data.put("regProduct", "uzone");
-			// data.put("regDeviceIdentify", bo.getDeviceId());
-			// data.put("remoteIp", bo.getDeviceIp());
-			// data.put("addChannel", bo.getAppChannel());
-			// commonFields.put("addProduct", "uzone");
-
-			return entity.getLoginId();
-		} else {
-			// EE.logEvent("Service", "userRegister");
-			// trans.setStatus(new BizException(ErrorCode.REGISTER_ERROR));
-			// trans.complete();
-			// logger.error("---------->账号注册异常:{}"+ex.getLocalizedMessage());
-			return 0l;
-		}
+		return doRegister(entity, null);
+		
+		
+//		logger.info("----------->正在创建用户({})登录信息!", loginName);
+//		
+//		sysLoginRepository.save(entity);
+//		logger.info("----------->登录账号({})已进行注册完成!", loginName);
+//		/* TODO:注册后续业务事件.如注册积分、注册送券...... */
+//
+//		if (entity.getLoginId() > 0) {
+//			// trans.complete();
+//			// 登录埋点(还有很多信息没有存到登录表中，设计上考虑这些属性没有必要与业务数据表绑定，所有独立埋点存储)
+//			// EE.logEvent(dto.toString);
+//			// Map<String, Object> data = new HashMap<String, Object>();
+//			// data.put("downloadChannel", "app");
+//			// data.put("regChannel", bo.getAppChannel());
+//			// data.put("regProduct", "uzone");
+//			// data.put("regDeviceIdentify", bo.getDeviceId());
+//			// data.put("remoteIp", bo.getDeviceIp());
+//			// data.put("addChannel", bo.getAppChannel());
+//			// commonFields.put("addProduct", "uzone");
+//
+//			return entity.getLoginId();
+//		} else {
+//			// EE.logEvent("Service", "userRegister");
+//			// trans.setStatus(new BizException(ErrorCode.REGISTER_ERROR));
+//			// trans.complete();
+//			// logger.error("---------->账号注册异常:{}"+ex.getLocalizedMessage());
+//			return 0l;
+//		}
 	}
 	
 	/**
@@ -326,7 +323,7 @@ public class SecurityBusiness {
 		loginVO.setUserIcon(entity.getIconUrl());
 		loginVO.setCreateTime(entity.getCreateTime().toString());
 		// 查询登录用户关联角色
-		loginVO.setRoleList(sysLoginRoleDao.listLoginRoleCode(entity.getLoginId()));
+		loginVO.setRoleList(listRoleCodeByLoginId(entity.getLoginId()));
 		return ResultBuilder.normalResult(loginVO);
 	}
 	
@@ -397,6 +394,11 @@ public class SecurityBusiness {
 		}
 	}
 
+	public List<String> listRoleCodeByLoginId(Long loginId) {
+		// 优先读缓存再读本地库
+		return sysLoginRoleDao.listRoleCodeByLoginId(loginId);
+	}
+
 	/**
 	 * 修改当前登录账号密码并使其现有token失效(需重新登录).<br>
 	 * 
@@ -433,12 +435,19 @@ public class SecurityBusiness {
 	 */
 	private String getJWTToken(String appId, String loginId, String loginName) {
 		// 构造 JWT Claims（把应用权限和用户权限合并）
-		Map<String, Object> claims = Map.of("appId", appId, "username", loginName);
-		// 用户角色（来自 UserDetails）
+//		Map<String, Object> claims = new HashMap<String, Object>();
+//		// 应用信息
+//		claims.put("appId", appId);
+//		// 用户信息
+//		claims.put("username", loginName);
+//		// 用户角色列表（来自 UserDetails）
+//		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 //		claims.put("roles", auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
 		// 应用权限范围（来自 oauth_app 表）
 //		claims.put("scopes", Arrays.asList(app.getAllowedScopes().split(",")));
-		return jwtUtil.generateToken(loginId, claims);
+//		return jwtUtil.generateToken(loginId, claims);
+		/* 重点提示：因为claims内容越多生成的token越长（jwt机制原因），所以claims暂时只放必要字段。 */
+		return jwtUtil.generateToken(loginId, Map.of("appId", appId, "username", loginName));
 	}
 	
 //	@Transactional

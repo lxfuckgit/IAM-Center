@@ -15,6 +15,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.util.StringUtils;
 
+import com.iamcenter.common.filter.JWTAuthenticationFilter;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -59,6 +61,12 @@ public class SecurityConfig {
 				.csrf(csrf -> csrf.disable());
 
 		return http.build();
+	}
+	
+	@Bean
+	public org.springframework.security.config.core.GrantedAuthorityDefaults grantedAuthorityDefaults() {
+		// 重新定义角色前辍（Security框架默认角色前辍：ROLE_)
+		return new org.springframework.security.config.core.GrantedAuthorityDefaults("");
 	}
 
 }

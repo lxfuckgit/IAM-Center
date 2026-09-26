@@ -1,19 +1,28 @@
-package com.iamcenter.config.security;
+package com.iamcenter.common.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.iamcenter.business.SecurityBusiness;
 import com.iamcenter.config.jwt.JwtUtil;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,14 +37,17 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 	
 	@Value("${config.auth.ignoreUrls:}")
 	private String ignoreUrlString;
+	
+	@Value("${jwt.refreshThreshold:1800000}")
+	private Long refreshThreshold;
 
 	private List<String> ignoreUrlList = new ArrayList<String>();
 
 	@Autowired
 	private JwtUtil jwtUtil;
 	
-	@Value("${jwt.refreshThreshold:1800000}")
-	private Long refreshThreshold;
+	@Autowired
+	private SecurityBusiness securityBusiness;
 	
 	@Override
 	public void afterPropertiesSet() throws ServletException {
@@ -65,9 +77,9 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 			filterChain.doFilter(request, response);
 			return;
 		}
-		String token = authorization.substring(7);
 		/* 验证Token有效性 */
-		if (!jwtUtil.validateTokenV2(token)) {
+		String token = authorization.substring(7);
+		if (!validateTokenAndGrantedAuthority(token)) {
 			logger.warn("--->Token令牌过期，请重新登录！");
 			response.setStatus(HttpServletResponse.SC_OK);
 			response.setContentType("application/json;charset=UTF-8");
@@ -104,4 +116,26 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 		// 结束当前filter
 		filterChain.doFilter(request, response);
 	}
+
+	private boolean validateTokenAndGrantedAuthority(String token) {
+		Claims claims = jwtUtil.parseToken(token);
+		if (null == claims) {
+			return false;
+		}
+		Date expiration = claims.getExpiration();
+		Date now = new Date();
+		if (expiration.before(now)) {
+			logger.warn("--->Token令牌已过期！");
+			return false;
+		}
+		/* 设置当前用户的authentication */
+		// 改读取源(优先读缓存）
+//		List<String> roleList = claims.get("roles", List.class);
+		List<String> roleList = securityBusiness.listRoleCodeByLoginId(Long.valueOf(claims.getSubject()));
+		List<GrantedAuthority> authorities = roleList == null ? Collections.emptyList() : roleList.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
+		SecurityContextHolder.getContext().setAuthentication(authentication);
+		return true;
+	}
+	
 }

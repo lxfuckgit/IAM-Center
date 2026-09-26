@@ -1,9 +1,7 @@
 package com.iamcenter.config.jwt;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 import javax.crypto.SecretKey;
@@ -11,9 +9,6 @@ import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
@@ -131,14 +126,6 @@ public class JwtUtil {
 	 * @return true-有效，false-无效
 	 */
 	public boolean validateToken(String token) {
-		if (null != parseToken(token)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public boolean validateTokenV2(String token) {
 		Claims claims = parseToken(token);
 		if (null == claims) {
 			return false;
@@ -148,14 +135,8 @@ public class JwtUtil {
 		if (expiration.before(now)) {
 			logger.warn("--->Token令牌已过期！");
 			return false;
-		} else {
-			// 设置authentication
-			List<org.springframework.security.core.GrantedAuthority> authorities = new ArrayList<>();
-			authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-			UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
-			SecurityContextHolder.getContext().setAuthentication(authentication);
-			return true;
 		}
+		return true;
 	}
 
 	/**

@@ -36,8 +36,8 @@ public class IAMUserDetailsService implements UserDetailsService {
 			throw new UsernameNotFoundException("--->用户限制登录！ " + username);
 		}
 		// 检查角色信息
-		List<String> roleList = sysLoginRoleDao.listLoginRoleCode(login.getLoginId());
-		// 返回UserDetails
+		List<String> roleList = sysLoginRoleDao.listRoleCodeByLoginId(login.getLoginId());
+		/* 返回UserDetails(提示：源码显示这里的roles()方法会自动加上“ROLE_”前辍； */
 		return User.builder().username(login.getLoginName()).password(login.getLoginPwd()).roles(roleList.toArray(new String[0])).build();
 	}
 
