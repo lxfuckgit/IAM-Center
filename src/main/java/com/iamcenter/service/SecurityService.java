@@ -22,6 +22,7 @@ import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
 import com.iamcenter.domain.security.SysResource;
 import com.iamcenter.domain.security.SysRole;
+import com.iamcenter.repository.PageQueryRepository;
 import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.SysLoginRoleDao;
 import com.iamcenter.repository.SysResourceDao;
@@ -88,6 +89,9 @@ public class SecurityService implements SecurityContract {
 	
 	@Autowired
 	protected JwtUtil jwtUtil;
+	
+	@Autowired
+	PageQueryRepository pageQueryRepository;
 	
 //	@Override
 //	public RstResult<String> createMenu(MenuDTO dto) {
@@ -292,7 +296,10 @@ public class SecurityService implements SecurityContract {
 	
 	@Override
 	public PageResult<ResourceVO> listResource(ResourceListDTO dto) {
-		return rbacBusiness.listResource(dto);
+		if (StringUtils.isEmpty(dto.getAppId())) {
+			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+		}
+		return pageQueryRepository.listResource(dto);
 	}
 	
 	@Override
@@ -423,7 +430,7 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
 		}
-		return rbacBusiness.listRole(dto);
+		return pageQueryRepository.listRole(dto);
 	}
 	
 	/**
@@ -469,8 +476,8 @@ public class SecurityService implements SecurityContract {
 			logger.warn("------>登录账户({})已存在,请确认!", dto.getLoginName());
 			return ResultBuilder.buildResult(SecurityECode.LOGIN_NAME_EXISIT);
 		} else {
-			Long r = securityBusiness.doRegister(dto.getAppId(), dto.getLoginName(), dto.getLoginPassword(), "v.9.9");
-			logger.warn("------>登录账户({})创建结果：", dto.getLoginName(), r);
+//			Long r = securityBusiness.doRegister(dto.getAppId(), dto.getLoginName(), dto.getLoginPassword(), "v.9.9");
+//			logger.warn("------>登录账户({})创建结果：", dto.getLoginName(), r);
 			return ResultBuilder.normalResult();
 		}
 	}
@@ -480,13 +487,7 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
 		}
-		return rbacBusiness.listLogin(dto);
-//		return ResultBuilder.normalResult(loginRepository.findAll().stream().map(mapper -> {
-//			LoginVO vo = new LoginVO();
-//			vo.setLoginName(mapper.getLoginName());
-//			vo.setStatus(mapper.getLoginState());
-//			return vo;
-//		}).collect(Collectors.toList()));
+		return pageQueryRepository.listLogin(dto);
 	}
 	
 	@Override
