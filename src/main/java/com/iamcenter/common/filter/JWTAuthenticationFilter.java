@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.iamcenter.business.SecurityBusiness;
+import com.iamcenter.business.RBACBusiness;
 import com.iamcenter.config.jwt.JwtUtil;
 
 import io.jsonwebtoken.Claims;
@@ -47,7 +47,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 	private JwtUtil jwtUtil;
 	
 	@Autowired
-	private SecurityBusiness securityBusiness;
+	private RBACBusiness rbacBusiness;
 	
 	@Override
 	public void afterPropertiesSet() throws ServletException {
@@ -131,7 +131,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 		/* 设置当前用户的authentication */
 		// 改读取源(优先读缓存）
 //		List<String> roleList = claims.get("roles", List.class);
-		List<String> roleList = securityBusiness.listRoleCodeByLoginId(Long.valueOf(claims.getSubject()));
+		List<String> roleList = rbacBusiness.listRoleCodeByLoginId(Long.valueOf(claims.getSubject()));
 		List<GrantedAuthority> authorities = roleList == null ? Collections.emptyList() : roleList.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
 		SecurityContextHolder.getContext().setAuthentication(authentication);

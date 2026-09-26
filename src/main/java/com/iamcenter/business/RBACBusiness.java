@@ -6,10 +6,13 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.iamcenter.repository.SysLoginRoleDao;
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.common.service.AbstractBizService;
 import com.saasapi.contract.security.dto.LoginListDTO;
@@ -23,6 +26,9 @@ import com.saasapi.contract.security.vo.RoleVO;
 @Component
 public class RBACBusiness extends AbstractBizService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	@Autowired
+	private SysLoginRoleDao sysLoginRoleDao;
 	
 	public PageResult<RoleVO> listRole(RoleListDTO dto) {
 		List<Object> params = new ArrayList<Object>();
@@ -131,6 +137,12 @@ public class RBACBusiness extends AbstractBizService {
 	public List<PrivilegeVO> listRoleResource(String appId, Long roleId) {
 		String sql = "select b.code,b.name from sys_role_resource a left join sys_resource b on a.id=b.id where a.role_id=? and b.app_id=?";
 		return jdbcTemplate.query(sql, new BeanPropertyRowMapper<PrivilegeVO>(PrivilegeVO.class), new Object[] { roleId, appId });
+	}
+	
+	@Cacheable(value = "listRoleCodeByLoginId", key = "#loginId")
+	public List<String> listRoleCodeByLoginId(Long loginId) {
+		// 优先读缓存再读本地库
+		return sysLoginRoleDao.listRoleCodeByLoginId(loginId);
 	}
 
 }

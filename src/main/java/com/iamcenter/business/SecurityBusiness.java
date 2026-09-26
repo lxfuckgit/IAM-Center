@@ -62,6 +62,9 @@ public class SecurityBusiness {
 	@Autowired
 	private JwtUtil jwtUtil; 
 	
+	@Autowired
+	private RBACBusiness rbacBusiness;
+	
 	@Value("${jwt.expiration:3600000}")
 	private Long expiration;
 
@@ -323,7 +326,7 @@ public class SecurityBusiness {
 		loginVO.setUserIcon(entity.getIconUrl());
 		loginVO.setCreateTime(entity.getCreateTime().toString());
 		// 查询登录用户关联角色
-		loginVO.setRoleList(listRoleCodeByLoginId(entity.getLoginId()));
+		loginVO.setRoleList(rbacBusiness.listRoleCodeByLoginId(entity.getLoginId()));
 		return ResultBuilder.normalResult(loginVO);
 	}
 	
@@ -392,11 +395,6 @@ public class SecurityBusiness {
 			logger.error(e.getMessage());
 			return null;
 		}
-	}
-
-	public List<String> listRoleCodeByLoginId(Long loginId) {
-		// 优先读缓存再读本地库
-		return sysLoginRoleDao.listRoleCodeByLoginId(loginId);
 	}
 
 	/**
