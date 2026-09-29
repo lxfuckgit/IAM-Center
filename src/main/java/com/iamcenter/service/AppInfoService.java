@@ -22,6 +22,7 @@ import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysRole;
 import com.iamcenter.repository.SysRoleRepository;
 import com.iamcenter.repository.apps.AppInfoRepository;
+import com.iamcenter.repository.party.PartyGroupRepository;
 import com.javapai.framework.action.PageResult;
 import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
@@ -46,6 +47,9 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 	
 	@Autowired
 	SecurityBusiness securityBusiness;
+	
+	@Autowired
+	PartyGroupRepository partyGroupRepository;
 
 	@Override
 	public RstResult<com.saasapi.contract.apps.vo.AppInfo> getAppInfo(String appId) {
@@ -137,11 +141,17 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 		if (appInfoRepository.existsByAppCode(dto.getAppCode())) {
 			return ResultBuilder.buildResult("40000002", "应用编号已存在!");
 		}
+		// 校验关联公司有效性
+		if (null != dto.getCompanyId()) {
+			if (!(partyGroupRepository.findById(dto.getCompanyId()).isPresent())) {
+				return ResultBuilder.buildResult("40000003", "公司信息有误!");
+			}
+		}
 		// 应用标识为空时自动生成
 		String appId = String.valueOf(System.currentTimeMillis());
 		String appStatus = StatusEnum.ENABLE.name();
-		String updateSQL = "insert into app_info (app_id, app_code, app_name, app_status, app_provider, app_contact) values (?, ?, ?, ?, ?, ?)";
-		int r1 = jdbcTemplate.update(updateSQL, appId, dto.getAppCode(), dto.getAppName(), appStatus, dto.getAppProvider(), dto.getAppContact());
+		String updateSQL = "insert into app_info (app_id, app_code, app_name, app_status, app_provider, app_contact, company_id) values (?, ?, ?, ?, ?, ?, ?)";
+		int r1 = jdbcTemplate.update(updateSQL, appId, dto.getAppCode(), dto.getAppName(), appStatus, dto.getAppProvider(), dto.getAppContact(), dto.getCompanyId());
 		logger.info("--->应用（{})创建结果：{}", dto.getAppName(), r1);
 		// 生成应用的管理员角色
 		SysRole userRole = new SysRole();
@@ -156,6 +166,7 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 		userLogin.setAppId(appId);
 		userLogin.setLoginName(dto.getAppCode());
 		userLogin.setLoginPwd(Constant.DEFAULT_PWD);
+		userLogin.setNickName(dto.getAppName());
 		userLogin.setVersion(Constant.DEFAULT_VERSION);
 		RstResult<String> r2 = securityBusiness.doRegister(userLogin, List.of(String.valueOf(userRole.getId())));
 		logger.info("--->应用管理员创建结果：{}", dto.getAppName(), r2.getCode());

@@ -19,9 +19,16 @@ public class PartyPerson extends Party implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	/**
+	 * 租户ID（公司ID） <br>
+	 * 提示：此字段解决同一个人在不同公司的情况。
+	 */
+	@Column(name = "company_id", length = 32)
+	private String companyId;
+
+	/**
 	 * 用户编号
 	 */
-	@Column(name = "code", length = 16, unique = true, nullable = false)
+	@Column(name = "code", length = 16, nullable = false)
 	private String code;
 
 	/**
@@ -45,26 +52,32 @@ public class PartyPerson extends Party implements Serializable {
 	/**
 	 * 用户性别(F/M).
 	 */
-	@Column(name = "xb", length = 1)
+	@Column(name = "sex", length = 1)
 	private char sex;
 
 	/**
 	 * 用户生日
 	 */
-	@Column(name = "sr", length = 16)
+	@Column(name = "birthday", length = 16)
 	private String birthday;
 
 	/**
 	 * 个人头像
 	 */
-	@Column(name = "iconId", length = 32)
-	private String iconId;
+	@Column(name = "icon_url", length = 32)
+	private String iconUrl;
 
 	/**
 	 * 身份证号
 	 */
 	@Column(name = "sfz", length = 18)
 	private String idCard;
+
+	/**
+	 * (当前)手机号
+	 */
+	@Column(name = "mobile_phone", length = 15)
+	private String mobilePhone;
 
 //	/**
 //	 * 用户QQ
@@ -73,16 +86,18 @@ public class PartyPerson extends Party implements Serializable {
 //	private String userQQ;
 
 //	/**
-//	 * (当前)手机号.
-//	 */
-//	@Column(name = "dqsjh", length = 15)
-//	private String userMobil;
-
-//	/**
 //	 * 用户邮箱
 //	 */
 //	@Column(name = "email", length = 30)
 //	private String email;
+
+	public String getCompanyId() {
+		return companyId;
+	}
+
+	public void setCompanyId(String companyId) {
+		this.companyId = companyId;
+	}
 
 	public String getCode() {
 		return code;
@@ -132,12 +147,12 @@ public class PartyPerson extends Party implements Serializable {
 		this.birthday = birthday;
 	}
 
-	public String getIconId() {
-		return iconId;
+	public String getIconUrl() {
+		return iconUrl;
 	}
 
-	public void setIconId(String iconId) {
-		this.iconId = iconId;
+	public void setIconUrl(String iconUrl) {
+		this.iconUrl = iconUrl;
 	}
 
 	public String getIdCard() {
@@ -148,40 +163,12 @@ public class PartyPerson extends Party implements Serializable {
 		this.idCard = idCard;
 	}
 
-//	public String getUserQQ() {
-//		return userQQ;
-//	}
-//
-//	public void setUserQQ(String userQQ) {
-//		this.userQQ = userQQ;
-//	}
-//
-//	public String getUserMobil() {
-//		return userMobil;
-//	}
-//
-//	public void setUserMobil(String userMobil) {
-//		this.userMobil = userMobil;
-//	}
-//
-//	public String getEmail() {
-//		return email;
-//	}
-//
-//	public void setEmail(String email) {
-//		this.email = email;
-//	}
-//
-//	public String getStatusId() {
-//		return statusId;
-//	}
-//
-//	public void setStatusId(String statusId) {
-//		this.statusId = statusId;
-//	}
+	public String getMobilePhone() {
+		return mobilePhone;
+	}
 
-	public static long getSerialversionuid() {
-		return serialVersionUID;
+	public void setMobilePhone(String mobilePhone) {
+		this.mobilePhone = mobilePhone;
 	}
 
 }

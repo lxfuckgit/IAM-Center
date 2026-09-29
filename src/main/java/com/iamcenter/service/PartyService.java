@@ -14,12 +14,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.PartyBusiness;
+import com.iamcenter.business.TokenBusiness;
 import com.iamcenter.business.ValidateBusiness;
 import com.iamcenter.common.code.PartyErrorCode;
 import com.iamcenter.domain.party.Party;
 import com.iamcenter.domain.party.PartyGroup;
 import com.iamcenter.domain.party.PartyPerson;
 import com.iamcenter.domain.party.PartyRelation;
+import com.iamcenter.repository.PageQueryRepository;
 import com.iamcenter.repository.apps.AppInfoRepository;
 import com.iamcenter.repository.party.PartyGroupRepository;
 import com.iamcenter.repository.party.PartyPersonRepository;
@@ -69,11 +71,16 @@ public class PartyService implements PartyContract {
 	private ValidateBusiness validateBusiness;
 	
 	@Autowired
+	private TokenBusiness tokenBusiness;
+	
+	@Autowired
 	AppInfoRepository appInfoRepository;
+	@Autowired
+	PageQueryRepository pageQueryRepository;
 
 	@Override
 	public PageResult<CompanyVO> listCompany(CompanyListDTO dto) {
-		return partyBusiness.listCompany(dto);
+		return pageQueryRepository.listCompany(dto);
 	}
 	
 	@Override
@@ -145,7 +152,7 @@ public class PartyService implements PartyContract {
 //		if (StringUtils.isEmpty(dto.getCompanyId())) {
 //			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
 //		}
-		return partyBusiness.listDepartment(dto);
+		return pageQueryRepository.listDepartment(dto);
 	}
 	
 	@Override
@@ -221,51 +228,56 @@ public class PartyService implements PartyContract {
 	
 	@Override
 	public PageResult<PersonVO> listPerson(PersonListDTO dto) {
-		return partyBusiness.listPerson(dto);
-//		return ResultBuilder.buildResult(partyPersonDao.findAll().stream().map(mapper -> {
-//			PersonVO vo = new PersonVO();
-//			vo.setPartyId(mapper.getPartyId());
-//			vo.setPartyCode(mapper.getCode());
-//			vo.setRealname(mapper.getPersonName());
-//			vo.setSex(mapper.getSex());
-//			return vo;
-//		}).collect(Collectors.toList()));
+		return pageQueryRepository.listPerson(dto);
 	}
 
 	@Override
+	@Transactional
 	public RstResult<String> createPerson(PersonCreateDTO dto) {
-//		if (dto.getCode() == null || dto.getCode().isEmpty()) {
-//			return ResultBuilder.buildResult("40000001", "用户编号不能为空");
-//		}
+		String companyId = tokenBusiness.getTokenAssocCompanyId();
+		if (StringUtils.isBlank(companyId)) {
+			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_CREATE);
+		}
+		if (dto.getCode() == null || dto.getCode().isEmpty()) {
+			return ResultBuilder.buildResult("40000001", "用户编号不能为空");
+		}
 		if (dto.getName() == null || dto.getName().isEmpty()) {
 			return ResultBuilder.buildResult("40000001", "用户姓名不能为空");
 		}
 		if (null != getPersonBySfz(dto.getIdcard())) {
 			logger.error("--->身份证号[{}]重复!.", dto.getIdcard());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_USER_IDCARD_INVALID);
-		} else if (null == dto.getName() || null == dto.getPhone()) {
+		} else if (null == dto.getName() || null == dto.getMobilePhone()) {
 			logger.warn("用户姓名或用户身机号有误，请检查数据完整性!");
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		} else {
-			// personBusiness.findByPerson(dto.getName(), dto.getPhone());
-//			if (personBusiness.findByPerson(dto.getName(), dto.getPhone()).size() >= 1) {
-//				return ResultBuilder.buildErrorResponse(ErrorCode.ERROR_EXIST_USER);
-//			}
 		}
-
-		Party party = new Party();
-		party.setAppId(dto.getAppId());
-		party.setPartyTypeId(PartyType.PPERSON.getKey());
-		party.setStatusId(dto.getStatusId());
-		partyDao.save(party);
-
+		if (StringUtils.isNotBlank(dto.getDeptId())) {
+			if (!partyGroupRepository.existsById(dto.getDeptId())) {
+				return ResultBuilder.buildResult("40000001", "部门信息不存在！");
+			}
+		}
+		
+		/* 1、人员信息创建 */
 		PartyPerson person = new PartyPerson();
+		person.setPartyTypeId(PartyType.PPERSON.getKey());
+		person.setRoleTypeId(RoleTypeEnum.ROLE_EMPLOYEE.getKey());
+		person.setCompanyId(companyId);
 		person.setCode(dto.getCode());
 		person.setLastName(dto.getName());
-		person.setNickName(dto.getName());
+		person.setNickName(dto.getNickName());
 		person.setIdCard(dto.getIdcard());
+		person.setMobilePhone(dto.getMobilePhone());
+		person.setSex(dto.getSex());
 		person.setStatusId(dto.getStatusId());
 		partyPersonDao.save(person);
+		
+		/* 2、人员归属部门信息创建 */
+		if (StringUtils.isNotBlank(dto.getDeptId())) {
+			String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
+			String relationType = PartyRelationType.PARENT_CHILD.getKey();
+			partyBusiness.createRelation(dto.getDeptId(), roleIdFrom, person.getPartyId(), person.getRoleTypeId(), relationType);
+			logger.info("--->[{}]成员关系创建完成 ...", person.getLastName());
+		}
 
 //		if (null != dto.getPhone()) {
 //			MyContactDTO contact = new MyContactDTO(party.getPartyId(), ContactType.CONTACT_PHONE, dto.getPhone());
@@ -285,7 +297,7 @@ public class PartyService implements PartyContract {
 //			personBusines.bindPartyId2LoginId();
 		}
 
-		return ResultBuilder.normalResult(party.getPartyId());
+		return ResultBuilder.normalResult(person.getPartyId());
 	}
 
 	@Override
