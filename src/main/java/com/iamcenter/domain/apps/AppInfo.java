@@ -41,6 +41,11 @@ public class AppInfo extends TopBaseDomain {
 	 */
 	@Column(name = "app_contact", length = 32)
 	private String appContact;
+	/**
+	 * 应用关联公司
+	 */
+	@Column(name = "company_id", length = 32)
+	private String companyId;
 
 	public Long getAppId() {
 		return appId;
@@ -88,6 +93,14 @@ public class AppInfo extends TopBaseDomain {
 
 	public void setAppContact(String appContact) {
 		this.appContact = appContact;
+	}
+
+	public String getCompanyId() {
+		return companyId;
+	}
+
+	public void setCompanyId(String companyId) {
+		this.companyId = companyId;
 	}
 
 }

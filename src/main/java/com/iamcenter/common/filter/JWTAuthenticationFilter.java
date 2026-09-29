@@ -134,6 +134,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 		List<String> roleList = rbacBusiness.listRoleCodeByLoginId(Long.valueOf(claims.getSubject()));
 		List<GrantedAuthority> authorities = roleList == null ? Collections.emptyList() : roleList.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
+		authentication.setDetails(claims.get("appId"));
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 		return true;
 	}

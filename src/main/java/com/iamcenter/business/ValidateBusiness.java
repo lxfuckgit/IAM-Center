@@ -40,7 +40,10 @@ public class ValidateBusiness {
 		if (!appInfo.getAppStatus().equals(StatusEnum.ENABLE.getValue())) {
 			return ResultBuilder.buildResult("40000003", "此应用已被停用!");
 		}
-		return ResultBuilder.normalResult();
-	}
 
+		RstResult<String> result = ResultBuilder.normalResult();
+		result.setData(appInfo.getCompanyId());
+		return result;
+	}
+	
 }

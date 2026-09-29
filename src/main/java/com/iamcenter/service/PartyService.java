@@ -1,25 +1,26 @@
 package com.iamcenter.service;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.PartyBusiness;
+import com.iamcenter.business.ValidateBusiness;
+import com.iamcenter.common.code.PartyErrorCode;
 import com.iamcenter.domain.party.Party;
 import com.iamcenter.domain.party.PartyGroup;
 import com.iamcenter.domain.party.PartyPerson;
-import com.iamcenter.domain.party.PartyRelationId;
+import com.iamcenter.domain.party.PartyRelation;
+import com.iamcenter.repository.apps.AppInfoRepository;
 import com.iamcenter.repository.party.PartyGroupRepository;
 import com.iamcenter.repository.party.PartyPersonRepository;
 import com.iamcenter.repository.party.PartyRelationRepository;
@@ -30,8 +31,12 @@ import com.javapai.framework.action.RstResult;
 import com.javapai.framework.enums.ErrorCode;
 import com.javapai.framework.enums.StatusEnum;
 import com.saasapi.contract.party.PartyContract;
+import com.saasapi.contract.party.dto.CompanyCreateDTO;
 import com.saasapi.contract.party.dto.CompanyListDTO;
+import com.saasapi.contract.party.dto.CompanyUpdateDTO;
 import com.saasapi.contract.party.dto.DepartmentListDTO;
+import com.saasapi.contract.party.dto.DeptCreateDTO;
+import com.saasapi.contract.party.dto.DeptUpdateDTO;
 import com.saasapi.contract.party.dto.PartyGroupDTO;
 import com.saasapi.contract.party.dto.PersonCreateDTO;
 import com.saasapi.contract.party.dto.PersonListDTO;
@@ -59,21 +64,159 @@ public class PartyService implements PartyContract {
 
 	@Autowired
 	private PartyBusiness partyBusiness;
-
-//	@Autowired
-//	private ContactContract contactService;
-
-//	@Autowired
-//	private HY700Repository hy700Repository;
 	
+	@Autowired
+	private ValidateBusiness validateBusiness;
+	
+	@Autowired
+	AppInfoRepository appInfoRepository;
+
 	@Override
 	public PageResult<CompanyVO> listCompany(CompanyListDTO dto) {
 		return partyBusiness.listCompany(dto);
-//		return ResultBuilder.buildResult(hy101Repository.findAll().stream().map(mapper -> {
-//			CompanyVO vo = new CompanyVO();
-//			BeanUtils.copyProperties(mapper, vo);
-//			return vo;
-//		}).collect(Collectors.toList()));
+	}
+	
+	@Override
+	public RstResult<String> createCompany(CompanyCreateDTO dto) {
+		PartyGroupDTO pg = new PartyGroupDTO();
+		pg.setRoleType(RoleTypeEnum.ROLE_COMPANY);
+		pg.setCode(dto.getCompanyCode());
+		pg.setName(dto.getCompanyName());
+		return createPartyGroup(pg);
+	}
+
+	@Override
+	public RstResult<CompanyVO> getCompany(CompanyUpdateDTO dto) {
+		Optional<PartyGroup> optional = partyGroupRepository.findById(dto.getCompanyId());
+		if (optional.isEmpty()) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		CompanyVO vo = new CompanyVO();
+		vo.setCompanyId(optional.get().getPartyId());
+		vo.setCompanyCode(optional.get().getGroupCode());
+		vo.setCompanyName(optional.get().getGroupName());
+		vo.setCreateTime(optional.get().getCreateTime().toLocalDateTime());
+		return ResultBuilder.normalResult(vo);
+	}
+
+	@Override
+	public RstResult<String> updateCompany(CompanyUpdateDTO dto) {
+		Optional<PartyGroup> optional = partyGroupRepository.findById(dto.getCompanyId());
+		if (optional.isEmpty()) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		if (StringUtils.isNotBlank(dto.getCompanyCode())) {
+			optional.get().setGroupCode(dto.getCompanyCode());
+		}
+		if (StringUtils.isNotBlank(dto.getCompanyName())) {
+			optional.get().setGroupName(dto.getCompanyName());
+		}
+		if (StringUtils.isNotBlank(dto.getCompanyAddress())) {
+			optional.get().setGroupCode(dto.getCompanyCode());
+		}
+		partyGroupRepository.save(optional.get());
+		return ResultBuilder.normalResult();
+	}
+
+	@Override
+	public RstResult<String> deleteCompany(CompanyUpdateDTO dto) {
+		if(StringUtils.isBlank(dto.getCompanyId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
+		}
+		
+		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getCompanyId());
+		if (null != prList && prList.size() > 0) {
+			logger.info("--->[{}]公司信息存在引用关系！", dto.getCompanyId());
+		}
+		
+		partyGroupRepository.deleteById(dto.getCompanyId());
+		logger.info("--->[{}]公司信息已删除！", dto.getCompanyId());
+		return ResultBuilder.normalResult();
+	}
+	
+	@Override
+	public PageResult<DepartmentVO> listDepartment(DepartmentListDTO dto) {
+		String appId = SecurityContextHolder.getContext().getAuthentication().getDetails().toString();
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(appId);
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+		}
+		dto.setCompanyId(checkAppResult.getData());
+//		if (StringUtils.isEmpty(dto.getCompanyId())) {
+//			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+//		}
+		return partyBusiness.listDepartment(dto);
+	}
+	
+	@Override
+	public RstResult<String> createDepartment(DeptCreateDTO dto) {
+		String appId = SecurityContextHolder.getContext().getAuthentication().getDetails().toString();
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(appId);
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return checkAppResult;
+		}
+		if(StringUtils.isBlank(checkAppResult.getData())) {
+			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+		PartyGroupDTO pg = new PartyGroupDTO();
+		pg.setRoleType(RoleTypeEnum.ROLE_DETP);
+		pg.setCode(dto.getDeptCode());
+		pg.setName(dto.getDeptName());
+		pg.setParentId(checkAppResult.getData());
+		return createPartyGroup(pg);
+	}
+	
+	@Override
+	public RstResult<DepartmentVO> getDepartment(DeptUpdateDTO dto) {
+		Optional<PartyGroup> optional = partyGroupRepository.findById(dto.getDeptId());
+		if (optional.isEmpty()) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		DepartmentVO vo = new DepartmentVO();
+		vo.setDeptId(optional.get().getPartyId());
+		vo.setDeptCode(optional.get().getGroupCode());
+		vo.setDeptName(optional.get().getGroupName());
+		vo.setCreateTime(optional.get().getCreateTime().toLocalDateTime());
+		return ResultBuilder.normalResult(vo);
+	}
+
+	@Override
+	@Transactional
+	public RstResult<String> updateDepartment(DeptUpdateDTO dto) {
+		Optional<PartyGroup> optional = partyGroupRepository.findById(dto.getDeptId());
+		if (optional.isEmpty()) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+		}
+		if (StringUtils.isNotBlank(dto.getDeptCode())) {
+			optional.get().setGroupCode(dto.getDeptCode());
+		}
+		if (StringUtils.isNotBlank(dto.getDeptName())) {
+			optional.get().setGroupName(dto.getDeptName());
+		}
+//		if (StringUtils.isNotBlank(dto.getStatusId())) {
+//			optional.get().setGroupCode(dto.getStatusId());
+//		}
+		partyGroupRepository.save(optional.get());
+		return ResultBuilder.normalResult();
+	}
+	
+	@Override
+	@Transactional
+	public RstResult<String> deleteDepartment(DeptUpdateDTO dto) {
+		if(StringUtils.isBlank(dto.getDeptId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
+		}
+		
+//		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getDeptId());
+//		if (null != prList && prList.size() > 0) {
+//			logger.info("--->[{}]部门信息存在引用关系！", dto.getDeptId());
+//		}
+		
+		partyRelationDao.deleteAll(partyRelationDao.findByIdPartyIdTo(dto.getDeptId()));
+		logger.info("--->[{}]部门关联信息已删除！", dto.getDeptId());
+		partyGroupRepository.deleteById(dto.getDeptId());
+		logger.info("--->[{}]部门信息已删除！", dto.getDeptId());
+		return ResultBuilder.normalResult();
 	}
 	
 	@Override
@@ -224,30 +367,18 @@ public class PartyService implements PartyContract {
 	}
 
 	@Override
-	public PageResult<DepartmentVO> listDepartment(DepartmentListDTO dto) {
-		return partyBusiness.listDepartment(dto);
-//		return ResultBuilder.buildResult(hy101Repository.findAll().stream().map(mapper -> {
-//			DepartmentVO vo = new DepartmentVO();
-//			vo.setCode(mapper.getGroupCode());
-//			vo.setName(mapper.getGroupName());
-////			BeanUtils.copyProperties(mapper, vo);
-//			return vo;
-//		}).collect(Collectors.toList()));
-	}
-
-	@Override
 	@Transactional
 	public RstResult<String> createPartyGroup(PartyGroupDTO dto) {
-		if (StringUtils.isEmpty(dto.getAppId())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
-		}
+//		if (StringUtils.isEmpty(dto.getAppId())) {
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+//		}
 		if (dto.getName() == null || dto.getName().isEmpty()) {
 			return ResultBuilder.buildResult("40000001", "团体名称不能为空");
 		}
 		if (dto.getRoleType() == null) {
 			return ResultBuilder.buildResult("40000001", "团体类型不能为空");
 		}
-		PartyGroup object = partyGroupRepository.findByAppIdAndGroupName(dto.getAppId(), dto.getName());
+		PartyGroup object = partyGroupRepository.findByGroupCodeAndGroupName(dto.getCode(), dto.getName());
 		if(null != object) {
 			logger.error("----------->当前团体名称{}已存在，请更换新名称!", dto.getName());
 			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
@@ -263,6 +394,7 @@ public class PartyService implements PartyContract {
 		/* 保存数据 */
 		PartyGroup pg = new PartyGroup();
 		pg.setAppId(dto.getAppId());
+		pg.setGroupCode(dto.getCode());
 		pg.setGroupName(dto.getName());
 		pg.setStatusId(StatusEnum.ENABLE.name());
 		pg.setPartyTypeId(PartyType.PGROUP.getKey());
@@ -284,11 +416,6 @@ public class PartyService implements PartyContract {
 		result.setData(pg.getPartyId());
 		return result;
 	}
-
-//	@Override
-//	public List<Supplier> listSupplier() {
-//		return null;
-//	}
 
 	@Override
 	public RstResult<List<PartyGroupDTO>> listPartyGroup() {
@@ -334,7 +461,6 @@ public class PartyService implements PartyContract {
 		logger.info("--->关系删除完成: {} -> {}", partyIdFrom, partyIdTo);
 		return ResultBuilder.normalResult();
 	}
-
 
 
 //  @Override

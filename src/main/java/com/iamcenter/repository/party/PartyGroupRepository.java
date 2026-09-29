@@ -11,4 +11,6 @@ public interface PartyGroupRepository extends JpaRepository<PartyGroup, String> 
 	PartyGroup findByGroupCode(String groupCode);
 
 	PartyGroup findByAppIdAndGroupName(String appId, String groupName);
+	
+	PartyGroup findByGroupCodeAndGroupName(String groupCode, String groupName);
 }

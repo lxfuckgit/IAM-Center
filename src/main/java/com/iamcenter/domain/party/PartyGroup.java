@@ -62,6 +62,12 @@ public class PartyGroup extends Party implements Serializable {
 	 */
 	@Column(name = "mobilePhone", length = 15)
 	private String mobilePhone;
+	
+	/**
+	 * 公司地址
+	 */
+	@Column(name = "address", length = 100)
+	private String address;
 
 	/**
 	 * 营业执照编号
