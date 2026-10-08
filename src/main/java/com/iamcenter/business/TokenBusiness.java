@@ -51,9 +51,18 @@ public class TokenBusiness {
 		return SecurityContextHolder.getContext().getAuthentication().getDetails().toString();
 	}
 	
-	public String getTokenAssocCompanyId() {
+	public AppInfo getTokenAssocAppInfo() {
 		String appId = getTokenAssocAppId();
 		AppInfo appInfo = appInfoRepository.findByAppId(Long.valueOf(appId));
+		if (null == appInfo || StringUtils.isBlank(appInfo.getCompanyId())) {
+			return null;
+		} else {
+			return appInfo;
+		}
+	}
+	
+	public String getTokenAssocCompanyId() {
+		AppInfo appInfo = getTokenAssocAppInfo();
 		if (null == appInfo || StringUtils.isBlank(appInfo.getCompanyId())) {
 			return null;
 		} else {

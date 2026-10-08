@@ -24,6 +24,12 @@ public class PartyRelation extends TopBaseDomain {
 	@Column(name = "relation_type_id", length = 12)
 	private String relationTypeId;
 
+	/**
+	 * 顺序号
+	 */
+	@Column(name = "sequence")
+	private Integer sequence;
+
 	public PartyRelationId getId() {
 		return id;
 	}
@@ -38,6 +44,14 @@ public class PartyRelation extends TopBaseDomain {
 
 	public void setRelationTypeId(String relationTypeId) {
 		this.relationTypeId = relationTypeId;
+	}
+
+	public Integer getSequence() {
+		return sequence;
+	}
+
+	public void setSequence(Integer sequence) {
+		this.sequence = sequence;
 	}
 
 }

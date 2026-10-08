@@ -20,4 +20,8 @@ public interface PartyRelationRepository extends JpaRepository<PartyRelation, Pa
 	List<PartyRelation> findByIdPartyIdFromAndRelationTypeId(String partyIdFrom, String relationTypeId);
 
 	List<PartyRelation> findByIdPartyIdToAndRelationTypeId(String partyIdTo, String relationTypeId);
+	
+	void deleteByIdPartyIdFrom(String partyIdFrom);
+	
+	void deleteByIdPartyIdTo(String partyIdTo);
 }

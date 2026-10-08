@@ -177,7 +177,7 @@ public class OrganizationController {
 		return partyService.createPerson(dto);
 	}
 
-	@GetMapping("/getPerson/{partyId}")
+	@RequestMapping("/getPerson/{partyId}")
 	public RstResult<PersonVO> getPerson(@PathVariable String partyId) {
 		return partyService.getPersonById(partyId);
 	}
@@ -187,19 +187,15 @@ public class OrganizationController {
 		return partyService.listPerson(dto);
 	}
 
-	@PutMapping("/updatePerson")
+	@RequestMapping("/updatePerson")
 	public RstResult<String> updatePerson(@RequestBody PersonUpdateDTO dto) {
 		return partyService.updatePerson(dto);
 	}
 
-//	@DeleteMapping("/deletePerson/{partyId}")
-//	public RstResult<String> deletePerson(@PathVariable String partyId) {
-//		if (!partyPersonRepository.existsById(partyId)) {
-//			return ResultBuilder.buildResult("40000002", "个人不存在");
-//		}
-//		partyPersonRepository.deleteById(partyId);
-//		return ResultBuilder.normalResult();
-//	}
+	@RequestMapping("/deletePerson")
+	public RstResult<String> deletePerson(@RequestBody PersonUpdateDTO dto) {
+		return partyService.deletePerson(dto.getPartyId());
+	}
 
 //	@PostMapping("/addRelation")
 //	public RstResult<String> addRelation(@RequestBody com.saasapi.contract.party.dto.RelationDTO dto) {
