@@ -1,6 +1,7 @@
 # 接口文档 
 
-## 1. 通用约定
+## 1. 通用约定  
+- **功能说明**：本文档接口包括公司、部门（团体）、人员、权限等相关功能的的增删改查。
 
 ### 1.1 请求方式
 
@@ -40,7 +41,7 @@
 ```json
 {
   "appId": "P1788682",	//应用标识（String，必填）
-  "pageIndex":1,	//页码(int，选填）
+  "pageIndex":1,	//当前页码【默认第1页】(int，选填）
   "pageSize":12		//每页条数（int，选填）
 }
 ```
@@ -135,7 +136,30 @@
 }
 ```
 
-#### 2.5 部门修改
+#### 2.5 部门修改  
+**接口路径**：`POST /iam/updateDepartment`  
+**请求参数**：  
+
+```json
+{
+    "appId": "1790610735981"	//应用标识（String，必填）
+    "deptId": "ff808023a30000",	//部门标识（String，必填）
+    "deptName": "测试2部",	  //部门名称（String，必填）
+    "headPartyId": "ff8080860001", //负责人标识（String，选填）
+    "deptSeq": 3, //负责人标识（String，选填）
+    "statusId": "ENABLE",//状态（String，选填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": "ff8080819f60602960001",
+    "message": "请求成功!"
+}
+```
+
 
 #### 2.6 员工列表
 **接口路径**：`POST /iam/listPerson`  
@@ -230,13 +254,13 @@
 
 ```json
 {
-  "personId":"ff8080819f360237019f360602960002",	//人员标识（String，必填，为空返回 40000003）
+  "partyId":"ff8002960002",	//人员标识（String，必填，为空返回 40000003）
   "code":"P0001",	//人员编号（String，选填）
   "name":"张三丰",	//姓名（String，选填）
   "sex":"M",		//性别（String/Char，选填）
   "birthday":"1990-01-01",	//出生日期（Date/String，选填）
   "iconId":"icon-001",	//头像标识（String，选填）
-  "idCard":"3301**********0011"	//身份证号（String，选填）
+  "idCard":"3301******0011"	//身份证号（String，选填）
 }
 ```
 **响应报文**：
@@ -277,7 +301,7 @@
             "loginId": 10001,
             "loginName": "zhangsan",
             "nickName": "张三",
-            "loginStatus": "ENABLE"
+            "loginState": "ENABLE"
         }
     ],
     "pageIndex": 1,
@@ -644,12 +668,13 @@
 }
 ```
 
-#### 2.3 登录账号
+#### 4.3 登录账号
 **接口路径**：`POST /iam/pwdLogin`  
 **请求参数**：  
 
 ```json
 {
+  "appId":"9ba59abbe56",		//应用标识（String，必填）
   "username":"13800138000",	//登录账号/手机号（String，必填）
   "password":"e10adc3949ba59abbe56e057f20f883e"	//登录密码（String，必填，MD5 加密后传输）
 }

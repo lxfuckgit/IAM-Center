@@ -27,6 +27,7 @@ import com.saasapi.contract.security.dto.RoleDTO;
 import com.saasapi.contract.security.dto.RoleDeleteDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
 import com.saasapi.contract.security.dto.RoleUpdateDTO;
+import com.saasapi.contract.security.vo.AuthorizationVO;
 import com.saasapi.contract.security.vo.LoginListVO;
 import com.saasapi.contract.security.vo.ResourceVO;
 import com.saasapi.contract.security.vo.RoleVO;
@@ -141,6 +142,11 @@ public class AuthorizationController {
 	@PostMapping("/restoreLoginRoles")
 	public RstResult<Boolean> restoreLoginRoles(@RequestBody LoginRoleUpdateDTO dto) {
 		return securityService.restoreLoginRoles(dto.getAppId(), dto.getLoginId(), dto.getRoleIdList());
+	}
+	
+	@RequestMapping("/getAuthorizationInfo")
+	public RstResult<AuthorizationVO> getAuthorizationInfo(@RequestBody LoginListDTO dto) {
+		return securityService.getAuthorizationInfo(1L);
 	}
 
 }

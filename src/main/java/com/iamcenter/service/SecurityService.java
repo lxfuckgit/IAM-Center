@@ -1,8 +1,10 @@
 package com.iamcenter.service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -11,12 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.RBACBusiness;
 import com.iamcenter.business.SecurityBusiness;
+import com.iamcenter.business.TokenBusiness;
 import com.iamcenter.config.jwt.JwtUtil;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
@@ -46,6 +48,7 @@ import com.saasapi.contract.security.dto.RoleDeleteDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
 import com.saasapi.contract.security.dto.RoleUpdateDTO;
 import com.saasapi.contract.security.enums.SecurityECode;
+import com.saasapi.contract.security.vo.AuthorizationVO;
 import com.saasapi.contract.security.vo.LoginListVO;
 import com.saasapi.contract.security.vo.LoginRoleVO;
 import com.saasapi.contract.security.vo.LoginVO;
@@ -82,10 +85,10 @@ public class SecurityService implements SecurityContract {
 	RBACBusiness rbacBusiness;
 	
 	@Autowired
-	SecurityBusiness securityBusiness;
+	TokenBusiness tokenBusiness;
 	
 	@Autowired
-	protected JdbcTemplate jdbcTemplate;
+	SecurityBusiness securityBusiness;
 	
 	@Autowired
 	protected JwtUtil jwtUtil;
@@ -328,19 +331,19 @@ public class SecurityService implements SecurityContract {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
 
-		SysRole role = roleRepository.findByAppIdAndCode(dto.getAppId(), dto.getRoleCode());
+		SysRole role = roleRepository.findByAppIdAndRoleCode(dto.getAppId(), dto.getRoleCode());
 		if (null != role) {
-			logger.warn("------>角色编码:{}对应的角色名({})已存在,请确认!", role.getCode(), role.getName());
+			logger.warn("------>角色编码:{}对应的角色名({})已存在,请确认!", role.getRoleCode(), role.getRoleName());
 			return ResultBuilder.buildResult(SecurityECode.ROLE_EXISIT);
 		}
 		
 		SysRole entity = new SysRole();
 		entity.setAppId(dto.getAppId());
-		entity.setCode(dto.getRoleCode());
-		entity.setName(dto.getRoleName());
+		entity.setRoleCode(dto.getRoleCode());
+		entity.setRoleName(dto.getRoleName());
 		entity.setStatusId(dto.getStatusId());
 		entity.setCreatorId(userId);
-		entity.setRemark(dto.getRoleRemark());
+		entity.setRoleRemark(dto.getRoleRemark());
 		roleRepository.save(entity);
 		return ResultBuilder.normalResult();
 	}
@@ -362,10 +365,10 @@ public class SecurityService implements SecurityContract {
 			RoleVO role = new RoleVO();
 			role.setRoleId(String.valueOf(optional.get().getId()));
 			role.setAppId(optional.get().getAppId());
-			role.setRoleCode(optional.get().getCode());
-			role.setRoleName(optional.get().getName());
+			role.setRoleCode(optional.get().getRoleCode());
+			role.setRoleName(optional.get().getRoleName());
 //			role.setSequence(optional.get().getId());
-			role.setRoleRemark(optional.get().getRemark());
+			role.setRoleRemark(optional.get().getRoleRemark());
 			return ResultBuilder.normalResult(role);
 		} else {
 			return ResultBuilder.buildResult(SecurityECode.ROLE_INVALID);
@@ -413,10 +416,10 @@ public class SecurityService implements SecurityContract {
 		}
 		/* 修改角色 */
 		if (StringUtils.isNotBlank(dto.getRoleName())) {
-			optional.get().setName(dto.getRoleName());
+			optional.get().setRoleName(dto.getRoleName());
 		}
 		if (StringUtils.isNotBlank(dto.getRoleRemark())) {
-			optional.get().setRemark(dto.getRoleRemark());
+			optional.get().setRoleRemark(dto.getRoleRemark());
 		}
 		optional.get().setUpdateId(userId);
 		optional.get().setUpdateTime(UtilDateTime.currentTimestamp());
@@ -497,17 +500,11 @@ public class SecurityService implements SecurityContract {
 	
 	@Override
 	public List<LoginRoleVO> listLoginRole(Long loginId) {
-//		return loginRoleRepository.findAll().stream().map(mapper -> {
-//			LoginRoleVO vo = new LoginRoleVO();
-//			vo.setLoginId(String.valueOf(mapper.getLoginId()));
-//			vo.setRoleId(mapper.getRoleId());
-//			return vo;
-//		}).collect(Collectors.toList());
-		return loginRoleRepository.listLoginRole(loginId).stream().map(mapper -> {
+		return rbacBusiness.listLoginRole(loginId).stream().map(mapper -> {
 			LoginRoleVO vo = new LoginRoleVO();
-			vo.setRoleId(String.valueOf(mapper[0]));
-			vo.setRoleCode(String.valueOf(mapper[1]));
-			vo.setRoleName(String.valueOf(mapper[2]));
+			vo.setRoleId(String.valueOf(mapper.getId()));
+			vo.setRoleCode(mapper.getRoleCode());
+			vo.setRoleName(mapper.getRoleName());
 			return vo;
 		}).collect(Collectors.toList());
 	}
@@ -542,7 +539,7 @@ public class SecurityService implements SecurityContract {
 		}
 		
 		loginRoleRepository.save(new SysLoginRole(loginId, roleId));
-		logger.info("--->用户[{}]添加角色[{}]完成！", loginOptional.get().getLoginName(), roleOptional.get().getName());
+		logger.info("--->用户[{}]添加角色[{}]完成！", loginOptional.get().getLoginName(), roleOptional.get().getRoleName());
 		return ResultBuilder.normalResult();
 	}
 	
@@ -667,6 +664,25 @@ public class SecurityService implements SecurityContract {
 		});
 
 		return ResultBuilder.normalResult(list);
+	}
+
+	@Override
+	public RstResult<AuthorizationVO> getAuthorizationInfo(Long loginId) {
+		loginId = tokenBusiness.getTokenAssocLoginId();
+		Set<String> roleCodeSet = new HashSet<String>();
+		Set<String> privilegeCodeSet = new HashSet<String>();
+		// 读取用户的角色权限
+		List<SysRole> roleList = rbacBusiness.listLoginRole(loginId);
+		roleList.stream().forEach(role -> {
+			roleCodeSet.add(role.getRoleCode());
+			privilegeCodeSet.addAll(rbacBusiness.listRoleResourceCode(role.getId()));
+		});
+		// 返回用户授权信息
+		AuthorizationVO vo = new AuthorizationVO();
+		vo.setRoleList(roleCodeSet);
+		vo.setMenuList(rbacBusiness.listLoginMenu(loginId));
+		vo.setPrivilegeList(privilegeCodeSet);
+		return ResultBuilder.normalResult(vo);
 	}
 
 }

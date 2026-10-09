@@ -131,7 +131,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 		/* 设置当前用户的authentication */
 		// 改读取源(优先读缓存）
 //		List<String> roleList = claims.get("roles", List.class);
-		List<String> roleList = rbacBusiness.listRoleCodeByLoginId(Long.valueOf(claims.getSubject()));
+		List<String> roleList = rbacBusiness.listLoginRoleCode(Long.valueOf(claims.getSubject()));
 		List<GrantedAuthority> authorities = roleList == null ? Collections.emptyList() : roleList.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
 		authentication.setDetails(claims.get("appId"));

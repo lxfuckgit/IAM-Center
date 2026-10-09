@@ -156,8 +156,8 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 		// 生成应用的管理员角色
 		SysRole userRole = new SysRole();
 		userRole.setAppId(appId);
-		userRole.setCode(dto.getAppCode());
-		userRole.setName("管理员");
+		userRole.setRoleCode(dto.getAppCode());
+		userRole.setRoleName("管理员");
 		userRole.setStatusId(StatusEnum.ENABLE.getValue());
 		userRole.setCreatorId(SecurityContextHolder.getContext().getAuthentication().getName());
 		sysRoleRepository.save(userRole);

@@ -326,7 +326,7 @@ public class SecurityBusiness {
 		loginVO.setUserIcon(entity.getIconUrl());
 		loginVO.setCreateTime(entity.getCreateTime().toString());
 		// 查询登录用户关联角色
-		loginVO.setRoleList(rbacBusiness.listRoleCodeByLoginId(entity.getLoginId()));
+		loginVO.setRoleList(rbacBusiness.listLoginRoleCode(entity.getLoginId()));
 		return ResultBuilder.normalResult(loginVO);
 	}
 	

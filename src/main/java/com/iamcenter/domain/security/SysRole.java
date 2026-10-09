@@ -38,12 +38,12 @@ public class SysRole extends TopBaseDomain implements Serializable {
 	 * 角色编号
 	 */
 	@Column(name = "role_code", length = 30, unique = true, nullable = false)
-	private String code;
+	private String roleCode;
 	/**
 	 * 角色名称
 	 */
 	@Column(name = "role_name", length = 50, nullable = false)
-	private String name;
+	private String roleName;
 	/**
 	 * 角色状态
 	 */
@@ -53,7 +53,7 @@ public class SysRole extends TopBaseDomain implements Serializable {
 	 * 角色备注/角色描述
 	 */
 	@Column(name = "role_remark", length = 100)
-	private String remark;
+	private String roleRemark;
 	/**
 	 * 角色拥有权限列表
 	 */
@@ -81,14 +81,6 @@ public class SysRole extends TopBaseDomain implements Serializable {
 	@Column(name = "update_id", length = 32)
 	private String updateId;
 
-	public String getAppId() {
-		return appId;
-	}
-
-	public void setAppId(String appId) {
-		this.appId = appId;
-	}
-
 	public Long getId() {
 		return id;
 	}
@@ -97,22 +89,30 @@ public class SysRole extends TopBaseDomain implements Serializable {
 		this.id = id;
 	}
 
-	public String getCode() {
-		return code;
+	public String getAppId() {
+		return appId;
 	}
 
-	public void setCode(String code) {
-		this.code = code;
+	public void setAppId(String appId) {
+		this.appId = appId;
 	}
 
-	public String getName() {
-		return name;
+	public String getRoleCode() {
+		return roleCode;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setRoleCode(String roleCode) {
+		this.roleCode = roleCode;
 	}
-	
+
+	public String getRoleName() {
+		return roleName;
+	}
+
+	public void setRoleName(String roleName) {
+		this.roleName = roleName;
+	}
+
 	public String getStatusId() {
 		return statusId;
 	}
@@ -121,12 +121,12 @@ public class SysRole extends TopBaseDomain implements Serializable {
 		this.statusId = statusId;
 	}
 
-	public String getRemark() {
-		return remark;
+	public String getRoleRemark() {
+		return roleRemark;
 	}
 
-	public void setRemark(String remark) {
-		this.remark = remark;
+	public void setRoleRemark(String roleRemark) {
+		this.roleRemark = roleRemark;
 	}
 
 	public Set<SysResource> getResources() {

@@ -69,5 +69,9 @@ public class TokenBusiness {
 			return appInfo.getCompanyId();
 		}
 	}
+	
+	public Long getTokenAssocLoginId() {
+		return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+	}
 
 }
