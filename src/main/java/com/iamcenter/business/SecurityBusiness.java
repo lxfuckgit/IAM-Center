@@ -240,8 +240,10 @@ public class SecurityBusiness {
 		/* 2、保存注册信息 */
 		// 注册用户密码加密
 		loginInfo.setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, loginInfo.getLoginPwd()));
-		// 注册用户登录状态：INIT
-		loginInfo.setLoginState(StatusEnum.ENABLE.name());
+		// 默认注册用户状态：ENABLE
+		if(StringUtils.isBlank(loginInfo.getLoginState())) {
+			loginInfo.setLoginState(StatusEnum.ENABLE.name());	
+		}
 		sysLoginRepository.save(loginInfo);
 		logger.info("--->当前登录账号(loginName={})已注册完成!", loginInfo.getLoginName());
 		if (loginInfo.getLoginId() <= 0) {

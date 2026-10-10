@@ -36,7 +36,6 @@ import com.javapai.framework.common.vo.tree.TreeVO;
 import com.javapai.framework.enums.ErrorCode;
 import com.javapai.framework.utils.UtilDateTime;
 import com.saasapi.contract.security.SecurityContract;
-import com.saasapi.contract.security.dto.LoginCreateDTO;
 import com.saasapi.contract.security.dto.LoginListDTO;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
 import com.saasapi.contract.security.dto.ResourceCreateDTO;
@@ -460,30 +459,6 @@ public class SecurityService implements SecurityContract {
 	 * @return
 	 */
 //	public SysLogin getSysLoginByLoginName(String loginname);
-	
-	@Override
-	public RstResult<String> createLogin(LoginCreateDTO dto) {
-		if (StringUtils.isEmpty(dto.getAppId())) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
-		}
-//		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
-//		if(StringUtils.isEmpty(userId)) {
-//			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
-//		}
-//		if (StringUtils.isBlank(dto.getRoleCode()) && StringUtils.isBlank(dto.getRoleName())) {
-//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-//		}
-
-		SysLogin login = loginRepository.findByAppIdAndLoginName(dto.getAppId(), dto.getLoginName());
-		if (null != login) {
-			logger.warn("------>登录账户({})已存在,请确认!", dto.getLoginName());
-			return ResultBuilder.buildResult(SecurityECode.LOGIN_NAME_EXISIT);
-		} else {
-//			Long r = securityBusiness.doRegister(dto.getAppId(), dto.getLoginName(), dto.getLoginPassword(), "v.9.9");
-//			logger.warn("------>登录账户({})创建结果：", dto.getLoginName(), r);
-			return ResultBuilder.normalResult();
-		}
-	}
 	
 	@Override
 	public PageResult<LoginListVO> listLogin(LoginListDTO dto) {

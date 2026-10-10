@@ -82,7 +82,7 @@ public class AuthorizationController {
 	}
 	
 	@PostMapping(value = "/createResource")
-	public RstResult<String> addResource(@RequestBody ResourceCreateDTO dto) {
+	public RstResult<String> createResource(@RequestBody ResourceCreateDTO dto) {
 		return securityService.createResource(dto);
 	}
 	
