@@ -45,7 +45,6 @@ public class OrganizationController {
 	@DubboReference
 	private PartyContract partyService;
 	
-	@PreAuthorize("hasRole('super_admin')")
 	@RequestMapping("/listCompany")
 	public PageResult<CompanyVO> listCompany(@RequestBody CompanyListDTO dto) {
 		return partyService.listCompany(dto);

@@ -81,6 +81,14 @@ public class PartyService implements PartyContract {
 
 	@Override
 	public PageResult<CompanyVO> listCompany(CompanyListDTO dto) {
+		if (!tokenBusiness.hasSuperAdminRole()) {
+			String cId = tokenBusiness.getTokenAssocCompanyId();
+			if (StringUtils.isBlank(cId)) {
+				return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+			}
+			// 非超管账号只能查询关联的公司
+			dto.setCompanyId(cId);
+		}
 		return pageQueryRepository.listCompany(dto);
 	}
 	

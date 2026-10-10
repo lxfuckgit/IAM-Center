@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.SecurityBusiness;
+import com.iamcenter.business.TokenBusiness;
 import com.iamcenter.constant.Constant;
 import com.iamcenter.controller.dto.ChangeAppStatusDTO;
 import com.iamcenter.domain.apps.AppInfo;
@@ -47,6 +48,9 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 	
 	@Autowired
 	SecurityBusiness securityBusiness;
+	
+	@Autowired
+	TokenBusiness tokenBusiness;
 	
 	@Autowired
 	PartyGroupRepository partyGroupRepository;
@@ -125,6 +129,15 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 		if (StringUtils.isNotBlank(dto.getAppStatus())) {
 			sb.append(" and app_status=?");
 			params.add(dto.getAppStatus());
+		}
+		if (!tokenBusiness.hasSuperAdminRole()) {
+			String cId = tokenBusiness.getTokenAssocCompanyId();
+			if (StringUtils.isBlank(cId)) {
+				return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+			} else {
+				sb.append(" and company_id=?");
+				params.add(cId);
+			}
 		}
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), AppInfo.class);
 	}

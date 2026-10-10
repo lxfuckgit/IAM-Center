@@ -7,10 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.iamcenter.constant.Constant;
 import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.repository.SysLoginRepository;
@@ -71,7 +73,16 @@ public class TokenBusiness {
 	}
 	
 	public Long getTokenAssocLoginId() {
-		return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		Object obj = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		return Long.valueOf(obj.toString());
+	}
+	
+	public boolean hasSuperAdminRole() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null) {
+			return false;
+		}
+		return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(Constant.ROLE_SUPER_ADMIN));
 	}
 
 }

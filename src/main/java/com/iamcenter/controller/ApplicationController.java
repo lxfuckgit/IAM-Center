@@ -72,7 +72,6 @@ public class ApplicationController {
 	 * @param dto
 	 * @return
 	 */
-	@PreAuthorize("hasRole('super_admin')")
 	@RequestMapping("listAppInfo.php")
 	public PageResult<AppInfo> listAppInfo(@RequestBody AppListDTO dto) {
 		return appsService.listAppInfo(dto);

@@ -166,10 +166,18 @@ public class PageQueryRepository extends AbstractBizService {
 		StringBuffer sb = new StringBuffer();
 		sb.append("select a.id as company_id, a.group_code as company_code, a.group_name as company_name,create_time ");
 		sb.append(" from hy101 a left join hy100 b on a.id=b.id where role_type_id='ROLE_COMPANY'");
-//		if (StringUtils.isNotBlank(dto.getAppId())) {
-//			sb.append(" and app_id=?");
-//			params.add(dto.getAppId());
-//		}
+		if (StringUtils.isNotBlank(dto.getCompanyId())) {
+			sb.append(" and a.id=?");
+			params.add(dto.getCompanyId());
+		}
+		if (StringUtils.isNotBlank(dto.getCompanyCode())) {
+			sb.append(" and a.group_code like ?");
+			params.add("%" + dto.getCompanyCode() + "%");
+		}
+		if (StringUtils.isNotBlank(dto.getCompanyName())) {
+			sb.append(" and a.group_name like ?");
+			params.add("%" + dto.getCompanyName() + "%");
+		}
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), CompanyVO.class);
 	}
 
