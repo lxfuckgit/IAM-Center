@@ -112,6 +112,8 @@ public final class AuthService implements AuthContract {
 		entity.setLoginPwd(dto.getPassword());
 		entity.setVersion(dto.getVersion());
 		entity.setNickName(dto.getNickName());
+		entity.setLoginState(dto.getStatusId());
+		entity.setPartyId(dto.getPartyId());
 		return securityBusiness.doRegister(entity, dto.getRoleList());
 	}
 

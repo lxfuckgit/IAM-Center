@@ -1,5 +1,14 @@
 # 接口文档 
 
+## 0. 修改日志
+
+- **v20260920** iam_admin   
+	1、业务改造：单公司支持多应用。
+
+- **v20261010**（iam_admin）  
+	1、接口（pwdRegister）新增参数：version、statusId；
+
+
 ## 1. 通用约定  
 - **功能说明**：本文档接口包括公司、部门（团体）、人员、权限等相关功能的的增删改查。
 
@@ -204,7 +213,7 @@
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "name":"张三",	//用户姓名（String，必填，为空返回 40000001）
   "phone":"13800138000",	//手机号（String，必填，与姓名均不能为空）
-  "idcard":"3301**********0011",	//身份证号（String，选填，重复时返回身份证号重复错误）
+  "idCard":"3301*******0011",	//身份证号（String，必填，重复时返回身份证号重复错误）
   "code":"P0001",	//人员编号（String，选填）
   "statusId":"ENABLE",	//状态标识（String，选填）
   "email":"zhangsan@example.com",	//邮箱（String，选填）
@@ -628,12 +637,14 @@
 ```json
 {
   "appId":"49ba59abb",	//应用标识（String，必填）
+  "version":"v1.0",	//应用版本（String，必填）
   "username":"zhangsan",	//注册账号（String，必填）
-  "password":"e10af20f883e",	//注册密码（String，必填，MD5 加密后传输）
+  "password":"e10af20f883e",	//注册密码（String，必填）
   "password2":"e10a20f883e",	//二次密码（String，选填，不为空时会校验二者的一致性）
   "yqCode":"ABC123",	//邀请码（String，选填，系统开启邀请码验证时必填）
   "yzCode":"8888",	//图形验证码（String，选填，系统开启验证码验证时必填）
   "nickName":"张三",	//用户昵称（String，选填）
+  "statusId":"ENABLE",	//账号状态（String，选填，默认ENABLE状态） 可选项【启动=ENABLE 停用=DISABLE】
   "roleList":["ADMIN"]	//注册成功后直接授予的角色列表（List<String>，选填）
 }
 ```
@@ -676,7 +687,7 @@
 {
   "appId":"9ba59abbe56",		//应用标识（String，必填）
   "username":"13800138000",	//登录账号/手机号（String，必填）
-  "password":"e10adc3949ba59abbe56e057f20f883e"	//登录密码（String，必填，MD5 加密后传输）
+  "password":"e10adc3949ba59abbe56e057f20f883e"	//登录密码（String，必填）
 }
 ```
 **响应报文**：
@@ -721,9 +732,9 @@ Authorization: ff8080819f360237019f360602960000
 ```json
 {
   "loginId":10001,	//登录标识（long，必填）
-  "oldPasswd":"e10adc3949ba59abbe56e057f20f883e",	//旧密码（String，必填，MD5 加密后传输）
-  "newPasswd":"d8578edf8458ce06fbc5bb76a58c5ca4",	//新密码（String，必填，MD5 加密后传输）
-  "newPasswdAgain":"d8578edf8458ce06fbc5bb76a58c5ca4"	//新密码二次输入（String，必填，MD5 加密后传输）
+  "oldPasswd":"e10adc3949ba59abbe56e057f20f883e",	//旧密码（String，必填）
+  "newPasswd":"d8578edf8458ce06fbc5bb76a58c5ca4",	//新密码（String，必填）
+  "newPasswdAgain":"d8578edf8458ce06fbc5bb76a58c5ca4"	//新密码二次输入（String，必填）
 }
 ```
 **响应报文**：
@@ -744,7 +755,7 @@ Authorization: ff8080819f360237019f360602960000
 {
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "loginName":"zhangsan",	//登录账户（String，必填）
-  "newPassword":"d8578edf8458ce06fbc5bb76a58c5ca4"	//新密码（String，选填，MD5 加密后传输；不传则使用应用默认密码）
+  "newPassword":"d8578edf8458ce06fbc5bb76a58c5ca4"	//新密码（String，选填；不传则使用应用默认密码）
 }
 ```
 **响应报文**：

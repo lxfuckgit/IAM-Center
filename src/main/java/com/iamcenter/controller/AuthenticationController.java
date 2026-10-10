@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.javapai.framework.action.RstResult;
 import com.saasapi.contract.security.AuthContract;
 import com.saasapi.contract.security.dto.ChangePwdDTO;
+import com.saasapi.contract.security.dto.ConnectorPLoginDTO;
 import com.saasapi.contract.security.dto.LogoutDTO;
 import com.saasapi.contract.security.dto.PwdLoginDTO;
 import com.saasapi.contract.security.dto.RegPwdDTO;
@@ -68,6 +69,11 @@ public class AuthenticationController {
 	@RequestMapping(value = "/changePassword")
 	public RstResult<String> changePassword(@RequestBody ChangePwdDTO dto) {
 		return authContract.changePassword(dto);
+	}
+	
+	@RequestMapping(value = "/connectorPartyLogin")
+	public RstResult<String> connectorPartyLogin(@RequestBody ConnectorPLoginDTO dto) {
+		return authContract.connectorPartyLogin(dto);
 	}
 	
 //	@RequestMapping(value = "/auth/validateToken")
