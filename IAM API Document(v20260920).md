@@ -6,8 +6,11 @@
 	1、业务改造：单公司支持多应用。
 
 - **v20261010**（iam_admin）  
-	1、接口（pwdRegister）新增参数：version、statusId；
-
+	1、修改接口（pwdRegister）-新增参数：version、statusId、partyId；  
+	2、新增接口（connectorPartyLogin）  
+	
+- **v20261013**（iam_admin）  
+	1、新增接口（assignDepartmentOwner）
 
 ## 1. 通用约定  
 - **功能说明**：本文档接口包括公司、部门（团体）、人员、权限等相关功能的的增删改查。
@@ -59,17 +62,20 @@
 ```json
 {
     "code": "00000000",
+    "message": "请求成功!",
+    "pageSize": 12,
+    "pageIndex": 1,
+    "totalRecord": 1,
     "data": [
         {
-            "name": "贝克尔有限公司",
-            "id": "ff8080819f360237019f360602960000"
+            "companyCode": "91650LYHD",
+            "companyName": "xxx有限公司",
+            "companyAddress": "北京朝阳阳888号",
+            "companyId": "ff8081a0ec3d572b0000",
+            "createTime": "2026-09-29 16:17:18"
         }
     ],
-    "pageIndex": 1,
-    "totalPages": 1,
-    "pageSize": 12,
-    "message": "请求成功!",
-    "totalRecord": 3
+    "totalPages": 1
 }
 ```
 
@@ -131,8 +137,12 @@
 ```json
 {
   "appId":"BHT_FFZ",	//应用标识（String，必填）
-  "name":"研发部",	//部门名称（String，必填）
-  "companyId":"ff80802960000"	//所属公司标识（String，必填）
+  "deptCode":"D2029",	//部门编号（String，必填）
+  "deptName":"研发部",	//部门名称（String，必填）
+  "deptSeq":"2",	//部门排序号（String，选填）
+  "statusId":"ENABLE",	//状态标识（String，必填）；
+  "headPartyId": "ff8080860001", //负责人标识（String，选填）
+  "remark":"备注说明",	//部门描述（String，选填）；
 }
 ```
 **响应报文**：
@@ -153,10 +163,12 @@
 {
     "appId": "1790610735981"	//应用标识（String，必填）
     "deptId": "ff808023a30000",	//部门标识（String，必填）
+    "deptCode": "Dx819f6060",	  //部门编号（String，必填）
     "deptName": "测试2部",	  //部门名称（String，必填）
+    "deptSeq": 3, //部门排序号（String，选填）
+    "statusId":"ENABLE",	//状态标识（String，必填）；
     "headPartyId": "ff8080860001", //负责人标识（String，选填）
-    "deptSeq": 3, //负责人标识（String，选填）
-    "statusId": "ENABLE",//状态（String，选填）
+    "remark":"备注说明",	//部门描述（String，选填）；
 }
 ```
 **响应报文**：
@@ -169,6 +181,46 @@
 }
 ```
 
+#### 2.7 部门任命负责人  
+**接口路径**：`POST /iam/assignDepartmentOwner`  
+**请求参数**：  
+
+```json
+{
+    "appId": "1790610735981",	//应用标识（String，必填）
+    "deptId": "ff808023a30000",//部门标识（String，必填）
+    "partyId":"4028eebba133740c01a1337954d10002" //负责人标识（String，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": "操作成功！",
+    "message": "请求成功!"
+}
+```
+
+#### 2.6 部门删除  
+**接口路径**：`POST /iam/deleteDepartment`  
+**请求参数**：  
+
+```json
+{
+    "appId": "1790610735981"	//应用标识（String，必填）
+    "deptId": "ff808023a30000"	//部门标识（String，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": "操作成功！",
+    "message": "请求成功!"
+}
+```
 
 #### 2.6 员工列表
 **接口路径**：`POST /iam/listPerson`  
@@ -189,11 +241,17 @@
     "code": "00000000",
     "data": [
         {
-            "id": "ff8080819f360237019f360602960002",
-            "code": "P0001",
-            "realname": "张三",
-            "idCard": "3301**********0011",
-            "statusId": "ENABLE"
+            "partyId": "4028eebb10002", //人员标识
+            "partyCode": "P2024001",
+            "mobilePhone": "",
+            "realname": "生产员1",
+            "sex": "F",
+            "realnameStatus": null, //实名状态
+            "idCard": "430722198898765432",
+            "address": null,
+            "deptId": "4028eebba133740c01a13378abd50000",
+            "deptName": "生产1部",
+            "statusId": ""
         }
     ],
     "pageIndex": 1,
@@ -211,11 +269,14 @@
 ```json
 {
   "appId":"BHT_FFZ",	//应用标识（String，必填）
-  "name":"张三",	//用户姓名（String，必填，为空返回 40000001）
-  "phone":"13800138000",	//手机号（String，必填，与姓名均不能为空）
-  "idCard":"3301*******0011",	//身份证号（String，必填，重复时返回身份证号重复错误）
   "code":"P0001",	//人员编号（String，选填）
-  "statusId":"ENABLE",	//状态标识（String，选填）
+  "name":"张三",	//用户姓名（String，必填，为空返回 40000001）
+  "nickName":"昵称/花名",	/昵称/花名（String，选填）
+  "mobilePhone":"13800138000",	//手机号（String，必填，与姓名均不能为空）
+  "idCard":"3301*******0011",	//身份证号（String，必填，重复时返回身份证号重复错误）
+  "sex":"M",	//性别（char，选填）；选项：M-男性 F-女性
+  "deptId":"0819f3602",	//部门标识（String，选填）
+  "statusId":"ENABLE",	//状态标识（String，选填）；默认状态：ENABLE
   "email":"zhangsan@example.com",	//邮箱（String，选填）
   "tags":["VIP"],	//标签列表（List，选填）
   "loginId":10001		//关联的登录账号标识（String/Long，选填，传入后绑定登录账号）
@@ -644,6 +705,7 @@
   "yqCode":"ABC123",	//邀请码（String，选填，系统开启邀请码验证时必填）
   "yzCode":"8888",	//图形验证码（String，选填，系统开启验证码验证时必填）
   "nickName":"张三",	//用户昵称（String，选填）
+  "partyId":"e10af20f883e",	//关联人员标识（String，选填）；将当前注册登录账号关联到指定人员（可参考/iam/connectorPartyLogin方法）；
   "statusId":"ENABLE",	//账号状态（String，选填，默认ENABLE状态） 可选项【启动=ENABLE 停用=DISABLE】
   "roleList":["ADMIN"]	//注册成功后直接授予的角色列表（List<String>，选填）
 }
@@ -768,5 +830,29 @@ Authorization: ff8080819f360237019f360602960000
 }
 ```
 
-#### 2.7 更新账号资料
+#### 2.7 关联账号与人员
+**接口路径**：`POST /iam/connectorPartyLogin`  
+**请求参数**：  
+
+```json
+{
+  "loginId":"58ce06fbc5b",	//标识标识（String，必填）
+  "partyId":"df8458ce06fbc",	//人员标识（String，必填）
+  "appId":"d855bb76a58c5ca4"	//应用标识（String，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": "重置成功",
+    "message": "请求成功!"
+}
+```
+
+
+
+
+#### 2.10 更新账号资料
 --资料包含：
