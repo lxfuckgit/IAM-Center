@@ -38,6 +38,7 @@ import com.saasapi.contract.party.dto.CompanyListDTO;
 import com.saasapi.contract.party.dto.CompanyUpdateDTO;
 import com.saasapi.contract.party.dto.DepartmentListDTO;
 import com.saasapi.contract.party.dto.DeptCreateDTO;
+import com.saasapi.contract.party.dto.DeptOwnerDTO;
 import com.saasapi.contract.party.dto.DeptUpdateDTO;
 import com.saasapi.contract.party.dto.GroupCreateDTO;
 import com.saasapi.contract.party.dto.PartyStatusChangeDTO;
@@ -247,15 +248,28 @@ public class PartyService implements PartyContract {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
 		}
 		
-//		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getDeptId());
-//		if (null != prList && prList.size() > 0) {
-//			logger.info("--->[{}]部门信息存在引用关系！", dto.getDeptId());
-//		}
+		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getDeptId());
+		if (null != prList && prList.size() > 0) {
+			logger.info("--->[{}]部门信息存在引用关系！", dto.getDeptId());
+		}
 		
 		partyRelationDao.deleteAll(partyRelationDao.findByIdPartyIdTo(dto.getDeptId()));
 		logger.info("--->[{}]部门关联信息已删除！", dto.getDeptId());
 		partyGroupRepository.deleteById(dto.getDeptId());
 		logger.info("--->[{}]部门信息已删除！", dto.getDeptId());
+		return ResultBuilder.normalResult();
+	}
+
+	@Override
+	public RstResult<String> assignDepartmentOwner(DeptOwnerDTO dto) {
+		PartyPerson person = partyBusiness.getDeptPartyOwner(dto.getDeptId());
+		if (null == person || StringUtils.isBlank(person.getPartyId())) {
+			// 当部门没有负责人时进行创建
+			partyBusiness.createDeptPartyOwner(dto.getDeptId(), dto.getPartyId());
+		} else {
+			// 当部门负责人不一致时进行更新
+			partyBusiness.updateDeptPartyOwner(dto.getDeptId(), dto.getPartyId(), person.getPartyId());
+		}
 		return ResultBuilder.normalResult();
 	}
 	
@@ -380,7 +394,7 @@ public class PartyService implements PartyContract {
 		
 		/*3、update dept info*/
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
-			partyBusiness.appendPersonToDept(dto.getPartyId(), dto.getDeptId());
+			partyBusiness.updatePartyToDept(dto.getPartyId(), dto.getDeptId());
 		}
 
 		return ResultBuilder.normalResult();
@@ -478,7 +492,7 @@ public class PartyService implements PartyContract {
 		/* 保存负责人关系 */
 		if (StringUtils.isNotBlank(dto.getHeadPartyId())) {
 			PartyRelation relation = new PartyRelation();
-			relation.setId(new PartyRelationId(dto.getHeadPartyId(), RoleTypeEnum.ROLE_EMPLOYEE.getKey(), pg.getPartyId(), dto.getRoleType().name()));
+			relation.setId(new PartyRelationId(pg.getPartyId(), dto.getRoleType().name(), dto.getHeadPartyId(), RoleTypeEnum.ROLE_EMPLOYEE.getKey()));
 			relation.setRelationTypeId(PartyRelationType.PARTY_OWNER.getKey());
 			relation.setSequence(0);
 			partyRelationDao.save(relation);

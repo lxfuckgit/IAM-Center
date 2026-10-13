@@ -3,6 +3,7 @@ package com.iamcenter.business;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,7 +71,7 @@ public class PartyBusiness extends AbstractBizService {
 	public void createDeptPartyOwner(String deptId, String partyId) {
 		String roleIdFrom = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
 		String roleIdTo = RoleTypeEnum.ROLE_DETP.getKey();
-		String relationType = PartyRelationType.PARENT_CHILD.getKey();
+		String relationType = PartyRelationType.PARTY_OWNER.getKey();
 		createRelation(partyId, roleIdFrom, deptId, roleIdTo, relationType);
 	}
 	
@@ -124,43 +125,50 @@ public class PartyBusiness extends AbstractBizService {
 	}
 	
 	/**
-	 * 更新用户的部门信息。
-	 * 
-	 * @param partyId   用户标识
-	 * @param newDeptId 新部门标识
-	 * @param oldDeptId 老部门标识
-	 */
-	@Transactional
-	public void updatePersonDepartyment(String partyId, String newDeptId, String oldDeptId) {
-		String roleIdTo = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
-		String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
-		partyRelationDao.deleteById(new PartyRelationId(oldDeptId, roleIdFrom, partyId, roleIdTo));
-		logger.info("--->关系移除完成: {} -> {} [{}]", oldDeptId, partyId, PartyRelationType.PARENT_CHILD.getKey());
-		createRelation(newDeptId, roleIdFrom, partyId, roleIdTo, PartyRelationType.PARENT_CHILD.getKey());
-	}
-	
-	/**
-	 * 将【人员】加入到【部门】。<br>
-	 * <strong>提示：此方法只适用于人员单部门模式（操作过程：清除此用户关联的所有部门，再设置指定的唯一部门）。
+	 * 更新指定【人员】的【部门】信息。<br>
+	 * <strong>提示：此方法只适用于人员单部门模式（操作过程：清除此用户关联的所有部门，再设置指定的唯一部门）。<br>
 	 * 
 	 * @param partyId 人员标识
 	 * @param deptId  部门标识
 	 */
-	public void appendPersonToDept(String partyId, String deptId) {
+	@Transactional
+	public void updatePartyToDept(String partyId, String deptId) {
+		/* 1、查询现有人员的部门列表 */
 		String relationTypeId = PartyRelationType.PARENT_CHILD.getKey();
 		List<PartyRelation> list = partyRelationDao.findByIdPartyIdToAndRelationTypeId(partyId, relationTypeId);
-		if (null == list || list.size() == 0) {
-			return;
+		if (null != list && list.size() > 0) {
+			// 清除老部门
+			Long dSize = partyRelationDao.deleteByIdPartyIdToAndRelationTypeId(partyId, relationTypeId);
+			logger.info("--->已删除人员[{}]关联的部门记录[{}]！", partyId, dSize);
 		}
-		// 清除老部门
+		/* 2、将人员关联到新部门 */
 		String roleIdTo = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
 		String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
-		list.forEach(action -> {
-			partyRelationDao.deleteById(new PartyRelationId(action.getId().getPartyIdTo(), roleIdFrom, partyId, roleIdTo));
-			logger.info("--->人员[{}]移出部门[{}]完成！", action.getId().getPartyIdTo(), partyId);
-		});
-		// 关联新部门
 		createRelation(deptId, roleIdFrom, partyId, roleIdTo, PartyRelationType.PARENT_CHILD.getKey());
+	}
+	
+	/**
+	 * 将指定【人员】加入指定到【部门】。<br>
+	 * <strong>提示：此方法支持[人员]多[部门]的组织形式。<br>
+	 * 
+	 * @param partyId 人员标识
+	 * @param deptId  部门标识
+	 */
+	@Transactional
+	public boolean appendPartyToDept(String partyId, String deptId) {
+		if (StringUtils.isBlank(deptId) || StringUtils.isBlank(partyId)) {
+			logger.info("--->提示：部门[{}]或人员[{}]信息为空！", deptId, partyId);
+			return false;
+		}
+		Long checkValue = partyRelationDao.checkPartyRelationWithParentChild(deptId, partyId);
+		if (null != checkValue && checkValue > 0) {
+			logger.info("--->提示：部门[{}]的人员[{}]信息已存在！", deptId, partyId);
+			return true;
+		}
+		String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
+		String roleIdTo = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
+		createRelation(deptId, roleIdFrom, partyId, roleIdTo, PartyRelationType.PARENT_CHILD.getKey());
+		return true;
 	}
 
 }

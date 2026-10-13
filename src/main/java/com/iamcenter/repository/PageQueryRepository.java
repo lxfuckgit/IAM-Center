@@ -151,6 +151,14 @@ public class PageQueryRepository extends AbstractBizService {
 			sb.append(" and b.party_id_from=?");
 			params.add(dto.getCompanyId());
 		}
+		if (StringUtils.isNotBlank(dto.getDeptCode())) {
+			sb.append(" and b.a.group_code=?");
+			params.add(dto.getDeptCode());
+		}
+		if (StringUtils.isNotBlank(dto.getDeptName())) {
+			sb.append(" and a.group_name like ?");
+			params.add("%" + dto.getDeptName() + "%");
+		}
 		sb.append(" order by b.sequence desc");
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), DepartmentVO.class);
 	}

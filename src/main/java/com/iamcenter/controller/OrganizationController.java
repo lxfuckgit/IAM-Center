@@ -26,7 +26,9 @@ import com.saasapi.contract.party.dto.CompanyListDTO;
 import com.saasapi.contract.party.dto.CompanyUpdateDTO;
 import com.saasapi.contract.party.dto.DepartmentListDTO;
 import com.saasapi.contract.party.dto.DeptCreateDTO;
+import com.saasapi.contract.party.dto.DeptOwnerDTO;
 import com.saasapi.contract.party.dto.DeptUpdateDTO;
+import com.saasapi.contract.party.dto.PartyStatusChangeDTO;
 import com.saasapi.contract.party.dto.PersonCreateDTO;
 import com.saasapi.contract.party.dto.PersonListDTO;
 import com.saasapi.contract.party.dto.PersonUpdateDTO;
@@ -86,6 +88,11 @@ public class OrganizationController {
 	@RequestMapping("/deleteDepartment")
 	public RstResult<String> deleteDepartment(@RequestBody DeptUpdateDTO dto) {
 		return partyService.deleteDepartment(dto);
+	}
+	
+	@PostMapping("/assignDepartmentOwner")
+	public RstResult<String> assignDepartmentOwner(@RequestBody DeptOwnerDTO dto) {
+		return partyService.assignDepartmentOwner(dto);
 	}
 	
 	@GetMapping("/getGroup/{partyId}")
@@ -195,7 +202,12 @@ public class OrganizationController {
 	public RstResult<String> deletePerson(@RequestBody PersonUpdateDTO dto) {
 		return partyService.deletePerson(dto.getPartyId());
 	}
-
+	
+	@RequestMapping("/changePartyStatus")
+	public RstResult<String> changePartyStatus(@RequestBody PartyStatusChangeDTO dto) {
+		return partyService.changePartyStatus(dto);
+	}
+	
 //	@PostMapping("/addRelation")
 //	public RstResult<String> addRelation(@RequestBody com.saasapi.contract.party.dto.RelationDTO dto) {
 //		return partyService.addRelation(dto.getPartyIdFrom(), dto.getPartyIdTo(), dto.getRelationTypeId());
