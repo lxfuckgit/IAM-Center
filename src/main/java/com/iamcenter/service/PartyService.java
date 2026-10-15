@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.PartyBusiness;
+import com.iamcenter.business.RBACBusiness;
 import com.iamcenter.business.TokenBusiness;
 import com.iamcenter.business.ValidateBusiness;
 import com.iamcenter.common.code.PartyErrorCode;
@@ -21,7 +22,9 @@ import com.iamcenter.domain.party.PartyGroup;
 import com.iamcenter.domain.party.PartyPerson;
 import com.iamcenter.domain.party.PartyRelation;
 import com.iamcenter.domain.party.PartyRelationId;
+import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.repository.PageQueryRepository;
+import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.apps.AppInfoRepository;
 import com.iamcenter.repository.party.PartyGroupRepository;
 import com.iamcenter.repository.party.PartyPersonRepository;
@@ -67,6 +70,9 @@ public class PartyService implements PartyContract {
 	PartyRelationRepository partyRelationDao;
 
 	@Autowired
+	private RBACBusiness rbacBusiness;
+	
+	@Autowired
 	private PartyBusiness partyBusiness;
 	
 	@Autowired
@@ -79,7 +85,10 @@ public class PartyService implements PartyContract {
 	AppInfoRepository appInfoRepository;
 	@Autowired
 	PageQueryRepository pageQueryRepository;
-
+	
+	@Autowired
+	private SysLoginRepository sysLoginRepository;
+	
 	@Override
 	public PageResult<CompanyVO> listCompany(CompanyListDTO dto) {
 		if (!tokenBusiness.hasSuperAdminRole()) {
@@ -228,15 +237,16 @@ public class PartyService implements PartyContract {
 		}
 		partyGroupRepository.save(optional.get());
 		
-		/* 修改部门负责人 */
-		PartyPerson person = partyBusiness.getDeptPartyOwner(optional.get().getPartyId());
-		if (null == person && StringUtils.isNotBlank(dto.getHeadPartyId())) {
-			// 当部门没有负责人时进行创建
-			partyBusiness.createDeptPartyOwner(dto.getHeadPartyId(), optional.get().getPartyId());
-		} else if (!person.getPartyId().equals(dto.getHeadPartyId())) {
-			// 当部门负责人不一致时进行更新
-			partyBusiness.updateDeptPartyOwner(optional.get().getPartyId(), dto.getHeadPartyId(), person.getPartyId());
-		}
+		/* 修改部门负责人(启用assignDepartmentOwner方法单独处理） */
+//		PartyPerson person = partyBusiness.getDeptPartyOwner(optional.get().getPartyId());
+//		if (null == person && StringUtils.isNotBlank(dto.getHeadPartyId())) {
+//			// 当部门没有负责人时进行创建
+//			partyBusiness.createDeptPartyOwner(dto.getHeadPartyId(), optional.get().getPartyId());
+//		}
+//		if (null != person && (!person.getPartyId().equals(dto.getHeadPartyId()))) {
+//			// 当部门负责人不一致时进行更新
+//			partyBusiness.updateDeptPartyOwner(optional.get().getPartyId(), dto.getHeadPartyId(), person.getPartyId());
+//		}
 		
 		return ResultBuilder.normalResult();
 	}
@@ -262,6 +272,9 @@ public class PartyService implements PartyContract {
 
 	@Override
 	public RstResult<String> assignDepartmentOwner(DeptOwnerDTO dto) {
+		if (StringUtils.isBlank(dto.getDeptId()) || StringUtils.isBlank(dto.getPartyId())) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
+		}
 		PartyPerson person = partyBusiness.getDeptPartyOwner(dto.getDeptId());
 		if (null == person || StringUtils.isBlank(person.getPartyId())) {
 			// 当部门没有负责人时进行创建
@@ -302,10 +315,13 @@ public class PartyService implements PartyContract {
 		}
 		if (null != getPersonBySfz(dto.getIdCard())) {
 			logger.error("--->身份证号[{}]重复!.", dto.getIdCard());
-			return ResultBuilder.buildResult(ErrorCode.ERROR_USER_IDCARD_INVALID);
-		} else if (null == dto.getName() || null == dto.getMobilePhone()) {
-			logger.warn("用户姓名或用户身机号有误，请检查数据完整性!");
+			return ResultBuilder.buildResult(ErrorCode.ERROR_USER_IDCARD_INVALID, "身份证号重复!");
+		} else if (null == dto.getName()) {
+			logger.warn("用户姓名有误，请检查数据完整性!");
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+//		} else if (null == dto.getMobilePhone()) {
+//			logger.warn("用户身机号有误，请检查数据完整性!");
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
 			if (!partyGroupRepository.existsById(dto.getDeptId())) {
@@ -352,8 +368,10 @@ public class PartyService implements PartyContract {
 			// bind pId to loginId(mq sent to:);
 //			personBusines.bindPartyId2LoginId();
 		}
-
-		return ResultBuilder.normalResult(person.getPartyId());
+		
+		RstResult<String> result = ResultBuilder.normalResult();
+		result.setData(person.getPartyId());
+		return result;
 	}
 	
 	@Override
@@ -362,9 +380,11 @@ public class PartyService implements PartyContract {
 		if (StringUtils.isBlank(partyId)) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
-		partyPersonDao.deleteById(partyId);
-		partyRelationDao.deleteByIdPartyIdTo(partyId);
-		partyRelationDao.deleteByIdPartyIdFrom(partyId);
+		partyBusiness.deleteAllByPartyId(partyId);
+		List<SysLogin> loginList = sysLoginRepository.findByPartyId(partyId);
+		if (null != loginList && loginList.size() > 0) {
+			loginList.forEach(login -> rbacBusiness.deleteAllByLoginId(login.getLoginId()));
+		}
 		return ResultBuilder.normalResult();
 	}
 
@@ -383,10 +403,12 @@ public class PartyService implements PartyContract {
 		optional.get().setCode(dto.getCode());
 		optional.get().setFirstName(dto.getName());
 		optional.get().setLastName(dto.getName());
-		optional.get().setSex(dto.getSex());
-//		optional.get().setBirthday(dto.getBirthday());
-//		optional.get().setIconId(dto.getIconId());
+		optional.get().setNickName(dto.getNickName());
 		optional.get().setIdCard(dto.getIdCard());
+		optional.get().setSex(dto.getSex());
+		optional.get().setMobilePhone(dto.getMobilePhone());
+		optional.get().setBirthday(dto.getBirthday());
+//		optional.get().setIconId(dto.getIconId());
 		partyPersonDao.save(optional.get());
 
 		/*2、update contact info*/
@@ -403,10 +425,10 @@ public class PartyService implements PartyContract {
 	@Override
 	public RstResult<PersonVO> getPersonById(String partyId) {
 		Optional<PartyPerson> optional = partyPersonDao.findById(partyId);
-		if (!optional.isPresent()) {	
+		if (!optional.isPresent()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
 		}
-		
+
 //		List<String> set = Arrays.asList("phone", "code", "realname", "realnameAllStatus");
 //		Map<String, String> data = getPerson(partyId, new HashSet<>(set));
 //		if (data != null) {
@@ -416,9 +438,7 @@ public class PartyService implements PartyContract {
 //			vo.setRealnameStatus(data.get("realnameAllStatus"));
 //			return vo;
 //		}
-		PersonVO vo = new PersonVO();
-		vo.setRealname(optional.get().getLastName());
-		return ResultBuilder.normalResult(vo);
+		return ResultBuilder.normalResult(convertPersonVO(optional.get()));
 	}
 
 	@Override
@@ -426,16 +446,19 @@ public class PartyService implements PartyContract {
 		PartyPerson person = partyPersonDao.findByIdCard(idCard);
 		if (null == person) {
 			return null;
-		} else {
-			PersonVO vo = new PersonVO();
-			vo.setPartyId(person.getPartyId());
-			vo.setPartyCode(person.getCode());
-			vo.setMobilePhone(person.getMobilePhone());
-			vo.setRealname(person.getLastName());
-			vo.setSex(person.getSex());
-			vo.setIdCard(person.getIdCard());
-			return vo;
 		}
+		return convertPersonVO(person);
+	}
+
+	private PersonVO convertPersonVO(PartyPerson person) {
+		PersonVO vo = new PersonVO();
+		vo.setPartyId(person.getPartyId());
+		vo.setPartyCode(person.getCode());
+		vo.setPartyName(person.getLastName());
+		vo.setMobilePhone(person.getMobilePhone());
+		vo.setSex(person.getSex());
+		vo.setIdCard(person.getIdCard());
+		return vo;
 	}
 
 	@Override

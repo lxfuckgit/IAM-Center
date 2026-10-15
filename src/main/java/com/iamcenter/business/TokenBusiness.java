@@ -72,6 +72,20 @@ public class TokenBusiness {
 		}
 	}
 	
+	/**
+	 * 返回Token关联的登录标识（字符类型）。
+	 * 
+	 * @return
+	 */
+	public String getTokenAssocUserId() {
+		return SecurityContextHolder.getContext().getAuthentication().getName();
+	}
+	
+	/**
+	 * 返回Token关联的登录标识（数字类型）。
+	 * 
+	 * @return
+	 */
 	public Long getTokenAssocLoginId() {
 		Object obj = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 		return Long.valueOf(obj.toString());

@@ -1,5 +1,7 @@
 package com.iamcenter.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,6 +11,8 @@ import com.iamcenter.domain.security.SysLogin;
 
 @Repository
 public interface SysLoginRepository extends JpaRepository<SysLogin, Long> {
+	public List<SysLogin> findByPartyId(String partyId);
+	
 	public SysLogin findByLoginName(String loginName);
 
 	public SysLogin findByLoginToken(String loginToken);
@@ -16,6 +20,8 @@ public interface SysLoginRepository extends JpaRepository<SysLogin, Long> {
 	public SysLogin findByAppIdAndLoginName(String appId, String loginName);
 
 	public SysLogin findByAppIdAndExtLoginId(String appId, String extLoginId);
+	
+	public int deleteByPartyId(String partyId);
 	
 	public int deleteByLoginToken(String loginToken);
 

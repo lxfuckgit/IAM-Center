@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.iamcenter.business.TokenBusiness;
 import com.javapai.framework.action.PageResult;
+import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.common.service.AbstractBizService;
 import com.saasapi.contract.party.dto.CompanyListDTO;
 import com.saasapi.contract.party.dto.DepartmentListDTO;
@@ -17,8 +18,10 @@ import com.saasapi.contract.party.vo.CompanyVO;
 import com.saasapi.contract.party.vo.DepartmentVO;
 import com.saasapi.contract.party.vo.PersonVO;
 import com.saasapi.contract.security.dto.LoginListDTO;
+import com.saasapi.contract.security.dto.LoginListV2DTO;
 import com.saasapi.contract.security.dto.ResourceListDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
+import com.saasapi.contract.security.vo.LoginListV2VO;
 import com.saasapi.contract.security.vo.LoginListVO;
 import com.saasapi.contract.security.vo.ResourceVO;
 import com.saasapi.contract.security.vo.RoleVO;
@@ -51,6 +54,53 @@ public class PageQueryRepository extends AbstractBizService {
 		sb.append(" order by create_time desc");
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), LoginListVO.class);
 	}
+	
+	/**
+	 * 登录信息。
+	 * 
+	 * @param dto
+	 * @return
+	 */
+	public PageResult<LoginListV2VO> listLoginV2(LoginListV2DTO dto) {
+		String companyId = tokenBusiness.getTokenAssocCompanyId();
+		if (StringUtils.isEmpty(companyId)) {
+			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
+		}
+		
+		List<Object> params = new ArrayList<Object>();
+		params.add(companyId);
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append("select a.id as party_id,a.code as party_code,a.last_name as party_name,a.sex,a.sfz as id_card,a.mobile_phone,status_id,c.party_id_from as dept_id,d.group_name as dept_name,g.login_id,g.login_name,g.nick_name,g.login_state,g.create_time ");
+		sb.append(" from sys_login g ");
+		sb.append(" left join hy102 a on g.party_id=a.id");
+		sb.append(" left join hy100 b on a.id=b.id");
+		sb.append(" left join party_relation c on a.id=c.party_id_to and c.role_id_from='ROLE_DEPT'");
+		sb.append(" left join hy101 d on d.id=c.party_id_from");
+		sb.append(" where a.company_id=?");
+		if (StringUtils.isNotBlank(dto.getLoginName())) {
+			sb.append(" and g.login_name like ?");
+			params.add("%" + dto.getLoginName() + "%");
+		}
+		if (StringUtils.isNotBlank(dto.getPartyCode())) {
+			sb.append(" and a.party_code like ?");
+			params.add("%" + dto.getPartyCode() + "%");
+		}
+		if (StringUtils.isNotBlank(dto.getMobilePhone())) {
+			sb.append(" and a.mobile_phone like ?");
+			params.add("%" + dto.getMobilePhone() + "%");
+		}
+		if (StringUtils.isNotBlank(dto.getDeptId())) {
+			sb.append(" and d.id=?");
+			params.add(dto.getDeptId());
+		}
+		if (StringUtils.isNotBlank(dto.getStatusId())) {
+			sb.append(" and b.status_id=?");
+			params.add(dto.getStatusId());
+		}
+		sb.append(" order by g.create_time desc");
+		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), LoginListV2VO.class);
+	}
 
 	/**
 	 * 角色信息。
@@ -73,6 +123,10 @@ public class PageQueryRepository extends AbstractBizService {
 		if (StringUtils.isNotBlank(dto.getRoleName())) {
 			sb.append(" and role_name like ?");
 			params.add("%" + dto.getRoleName() + "%");
+		}
+		if (StringUtils.isNotBlank(dto.getStatusId())) {
+			sb.append(" and status_id=?");
+			params.add(dto.getStatusId());
 		}
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), RoleVO.class);
 	}
@@ -117,7 +171,7 @@ public class PageQueryRepository extends AbstractBizService {
 		params.add(tokenBusiness.getTokenAssocCompanyId());
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("select a.id as party_id,a.code as party_code,a.last_name as realname,sex,sfz as id_card,a.mobile_phone,status_id,c.party_id_from as dept_id,d.group_name as dept_name ");
+		sb.append("select a.id as party_id,a.code as party_code,a.last_name as party_name,sex,sfz as id_card,a.mobile_phone,status_id,c.party_id_from as dept_id,d.group_name as dept_name ");
 		sb.append(" from hy102 a ");
 		sb.append(" left join hy100 b on a.id=b.id");
 		sb.append(" left join party_relation c on a.id=c.party_id_to and c.role_id_from='ROLE_DEPT'");
@@ -130,6 +184,10 @@ public class PageQueryRepository extends AbstractBizService {
 		if (StringUtils.isNotBlank(dto.getName())) {
 			sb.append(" and a.name like ?");
 			params.add("%" + dto.getName() + "%");
+		}
+		if (StringUtils.isNotBlank(dto.getStatusId())) {
+			sb.append(" and b.status_id=?");
+			params.add(dto.getStatusId());
 		}
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), PersonVO.class);
 	}

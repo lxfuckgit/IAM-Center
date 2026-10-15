@@ -37,6 +37,7 @@ import com.javapai.framework.enums.ErrorCode;
 import com.javapai.framework.utils.UtilDateTime;
 import com.saasapi.contract.security.SecurityContract;
 import com.saasapi.contract.security.dto.LoginListDTO;
+import com.saasapi.contract.security.dto.LoginListV2DTO;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
 import com.saasapi.contract.security.dto.ResourceCreateDTO;
 import com.saasapi.contract.security.dto.ResourceDeleteDTO;
@@ -48,6 +49,7 @@ import com.saasapi.contract.security.dto.RoleListDTO;
 import com.saasapi.contract.security.dto.RoleUpdateDTO;
 import com.saasapi.contract.security.enums.SecurityECode;
 import com.saasapi.contract.security.vo.AuthorizationVO;
+import com.saasapi.contract.security.vo.LoginListV2VO;
 import com.saasapi.contract.security.vo.LoginListVO;
 import com.saasapi.contract.security.vo.LoginRoleVO;
 import com.saasapi.contract.security.vo.LoginVO;
@@ -224,6 +226,10 @@ public class SecurityService implements SecurityContract {
 		if (null != childList && childList.size() > 0) {
 			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE, "当前资源存在子节点，无法删除！");
 		}
+		List<SysRole> roleList = roleRepository.listRoleWithResourceId(dto.getResId());
+		if (null != roleList && roleList.size() > 0) {
+			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_DELETE, "当前资源存在引用关联，无法删除！");
+		}
 		resourceDao.delete(optional.get());
 		logger.info("--->[{}]资源信息已删除！", dto.getResId());
 		return ResultBuilder.normalResult();
@@ -254,9 +260,12 @@ public class SecurityService implements SecurityContract {
 //		if (StringUtils.isNotBlank(dto.getResCode())) {
 //			optional.get().setCode(dto.getResCode());
 //		}
-//		if (StringUtils.isNotBlank(dto.getIcon())) {
-//			optional.get().setIcon(dto.getIcon());
-//		}
+		if (StringUtils.isNotBlank(dto.getStatusId())) {
+			optional.get().setStatusId(dto.getStatusId());
+		}
+		if (StringUtils.isNotBlank(dto.getResIcon())) {
+			optional.get().setResIcon(dto.getResIcon());
+		}
 		if (StringUtils.isNotBlank(dto.getResUrl())) {
 			optional.get().setResUrl(dto.getResUrl());
 		}
@@ -322,7 +331,7 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isEmpty(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}
-		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+		String userId = tokenBusiness.getTokenAssocUserId();
 		if(StringUtils.isEmpty(userId)) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
 		}
@@ -343,6 +352,7 @@ public class SecurityService implements SecurityContract {
 		entity.setStatusId(dto.getStatusId());
 		entity.setCreatorId(userId);
 		entity.setRoleRemark(dto.getRoleRemark());
+		entity.setSequence(dto.getSequence());
 		roleRepository.save(entity);
 		return ResultBuilder.normalResult();
 	}
@@ -366,7 +376,7 @@ public class SecurityService implements SecurityContract {
 			role.setAppId(optional.get().getAppId());
 			role.setRoleCode(optional.get().getRoleCode());
 			role.setRoleName(optional.get().getRoleName());
-//			role.setSequence(optional.get().getId());
+			role.setSequence(optional.get().getSequence());
 			role.setRoleRemark(optional.get().getRoleRemark());
 			return ResultBuilder.normalResult(role);
 		} else {
@@ -420,6 +430,12 @@ public class SecurityService implements SecurityContract {
 		if (StringUtils.isNotBlank(dto.getRoleRemark())) {
 			optional.get().setRoleRemark(dto.getRoleRemark());
 		}
+		if (StringUtils.isNotBlank(dto.getStatusId())) {
+			optional.get().setStatusId(dto.getStatusId());
+		}
+		if (null != dto.getSequence()) {
+			optional.get().setSequence(dto.getSequence());
+		}
 		optional.get().setUpdateId(userId);
 		optional.get().setUpdateTime(UtilDateTime.currentTimestamp());
 		roleRepository.save(optional.get());
@@ -466,6 +482,11 @@ public class SecurityService implements SecurityContract {
 			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
 		}
 		return pageQueryRepository.listLogin(dto);
+	}
+	
+	@Override
+	public PageResult<LoginListV2VO> listLoginV2(LoginListV2DTO dto) {
+		return pageQueryRepository.listLoginV2(dto);
 	}
 	
 	@Override

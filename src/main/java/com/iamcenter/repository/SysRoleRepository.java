@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.iamcenter.domain.security.SysRole;
 
@@ -20,4 +21,8 @@ public interface SysRoleRepository extends JpaRepository<SysRole, Long> {
 	
 	@Query(value = "select b.res_code from sys_role_resource a left join sys_resource b on a.resource_id=b.id where a.role_id=?1", nativeQuery = true)
 	public List<String> listRoleResourceCode(Long roleId);
+	
+	@Query(value = "select r.* from sys_role r join sys_role_resource rr on rr.role_id=r.id where rr.resource_id=:resourceId", nativeQuery = true)
+	public List<SysRole> listRoleWithResourceId(@Param("resourceId") String resourceId);
+	
 }

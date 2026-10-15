@@ -53,7 +53,7 @@ public class PartyPerson extends Party implements Serializable {
 	 * 用户性别(F/M).
 	 */
 	@Column(name = "sex", length = 1)
-	private char sex;
+	private String sex;
 
 	/**
 	 * 用户生日
@@ -131,11 +131,11 @@ public class PartyPerson extends Party implements Serializable {
 		this.nickName = nickName;
 	}
 
-	public char getSex() {
+	public String getSex() {
 		return sex;
 	}
 
-	public void setSex(char sex) {
+	public void setSex(String sex) {
 		this.sex = sex;
 	}
 

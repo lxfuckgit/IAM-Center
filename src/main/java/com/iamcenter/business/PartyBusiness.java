@@ -26,6 +26,9 @@ public class PartyBusiness extends AbstractBizService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	
 	@Autowired
+	private PartyPersonRepository partyPersonDao;
+	
+	@Autowired
 	PartyRelationRepository partyRelationDao;
 	
 	@Autowired
@@ -168,6 +171,20 @@ public class PartyBusiness extends AbstractBizService {
 		String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
 		String roleIdTo = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
 		createRelation(deptId, roleIdFrom, partyId, roleIdTo, PartyRelationType.PARENT_CHILD.getKey());
+		return true;
+	}
+	
+	/**
+	 * 删除人员的所有信息。
+	 * 
+	 * @param loginId
+	 * @return
+	 */
+	public boolean deleteAllByPartyId(String partyId) {
+		partyPersonDao.deleteById(partyId);
+		partyRelationDao.deleteByIdPartyIdTo(partyId);
+		partyRelationDao.deleteByIdPartyIdFrom(partyId);
+		logger.info("--->提示：人员[{}]信息删除完毕！", partyId);
 		return true;
 	}
 

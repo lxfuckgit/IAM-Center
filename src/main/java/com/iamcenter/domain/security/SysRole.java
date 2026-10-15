@@ -69,7 +69,11 @@ public class SysRole extends TopBaseDomain implements Serializable {
 //		<!-- id是 sys_resource中间表的列名，同时也是一个对SysPrivilege对象的外键引用名 -->
 //		<many-to-many column="id" class="SysResource" />
 //	</set>
-
+	/**
+	 * 角色排序
+	 */
+	@Column(name = "sequence")
+	private Integer sequence;
 	/**
 	 * 创建人
 	 */
@@ -135,6 +139,14 @@ public class SysRole extends TopBaseDomain implements Serializable {
 
 	public void setResources(Set<SysResource> resources) {
 		this.resources = resources;
+	}
+	
+	public Integer getSequence() {
+		return sequence;
+	}
+
+	public void setSequence(Integer sequence) {
+		this.sequence = sequence;
 	}
 
 	public String getCreatorId() {

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.domain.security.SysRole;
+import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.SysLoginRoleDao;
 import com.iamcenter.repository.SysRoleRepository;
 import com.javapai.framework.common.service.AbstractBizService;
@@ -24,6 +25,8 @@ import com.saasapi.contract.security.vo.PrivilegeVO;
 @Component
 public class RBACBusiness extends AbstractBizService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	@Autowired
+	private SysLoginRepository sysLoginRepository;
 	
 	@Autowired
 	private SysLoginRoleDao sysLoginRoleDao;
@@ -111,6 +114,18 @@ public class RBACBusiness extends AbstractBizService {
 		return sysLoginRoleDao.listRoleCodeByLoginId(loginId);
 	}
 	
+	/**
+	 * 删除登录账户的所有信息。
+	 * 
+	 * @param loginId
+	 * @return
+	 */
+	public boolean deleteAllByLoginId(Long loginId) {
+		sysLoginRepository.deleteById(loginId);
+		sysLoginRoleDao.deleteByLoginId(loginId);
+		logger.info("--->提示：登录[{}]信息删除完毕！", loginId);
+		return true;
+	}
 	
 	/**
 	 * 将扁平的菜单列表组装成树。 前提：入参列表已（SQL 已保证）。
