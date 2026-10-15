@@ -17,6 +17,7 @@ import com.javapai.framework.common.vo.tree.TreeVO;
 import com.saasapi.contract.security.SecurityContract;
 import com.saasapi.contract.security.dto.RoleResourceUpdateDTO;
 import com.saasapi.contract.security.dto.LoginListDTO;
+import com.saasapi.contract.security.dto.LoginListV2DTO;
 import com.saasapi.contract.security.dto.LoginRoleDTO;
 import com.saasapi.contract.security.dto.LoginRoleUpdateDTO;
 import com.saasapi.contract.security.dto.ResourceCreateDTO;
@@ -28,6 +29,7 @@ import com.saasapi.contract.security.dto.RoleDeleteDTO;
 import com.saasapi.contract.security.dto.RoleListDTO;
 import com.saasapi.contract.security.dto.RoleUpdateDTO;
 import com.saasapi.contract.security.vo.AuthorizationVO;
+import com.saasapi.contract.security.vo.LoginListV2VO;
 import com.saasapi.contract.security.vo.LoginListVO;
 import com.saasapi.contract.security.vo.ResourceVO;
 import com.saasapi.contract.security.vo.RoleVO;
@@ -126,9 +128,14 @@ public class AuthorizationController {
 		return securityService.revokeRolePrivilege(dto.getAppId(), dto.getRoleId(), dto.getResourceIdList());
 	}
 	
-	@RequestMapping("listLogin")
+	@RequestMapping("/listLogin")
 	public PageResult<LoginListVO> listLogin(@RequestBody LoginListDTO dto) {
 		return securityService.listLogin(dto);
+	}
+	
+	@RequestMapping("/listLoginV2")
+	public PageResult<LoginListV2VO> listLoginV2(@RequestBody LoginListV2DTO dto) {
+		return securityService.listLoginV2(dto);
 	}
 	
 	@PostMapping("/listLoginRoleIds")

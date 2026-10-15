@@ -49,6 +49,11 @@ public class SysLogin extends AbstractDomain implements Serializable {
 	@Column(name = "login_pwd", length = 128, nullable = false)
 	private String loginPwd;
 	/**
+	 * 登录别名(登录昵称）
+	 */
+	@Column(name = "login_alias", length = 60)
+	private String loginAlias;
+	/**
 	 * 登录授权token（为兼容jwt放宽长度）
 	 */
 	@Column(name = "login_token", length = 255)
@@ -92,11 +97,8 @@ public class SysLogin extends AbstractDomain implements Serializable {
 	@Column(name = "invite_code", length = 50)
 	private String inviteCode;
 	/**
-	 * 登录用户昵称
+	 * 账号图标
 	 */
-	@Column(name = "nick_name", length = 60)
-	private String nickName;
-
 	@Column(name = "icon_url", length = 200)
 	private String iconUrl;
 
@@ -130,6 +132,14 @@ public class SysLogin extends AbstractDomain implements Serializable {
 
 	public void setLoginPwd(String loginPwd) {
 		this.loginPwd = loginPwd;
+	}
+	
+	public String getLoginAlias() {
+		return loginAlias;
+	}
+
+	public void setLoginAlias(String loginAlias) {
+		this.loginAlias = loginAlias;
 	}
 
 	public String getLoginToken() {
@@ -202,14 +212,6 @@ public class SysLogin extends AbstractDomain implements Serializable {
 
 	public void setRstSource(String rstSource) {
 		this.rstSource = rstSource;
-	}
-
-	public String getNickName() {
-		return nickName;
-	}
-
-	public void setNickName(String nickName) {
-		this.nickName = nickName;
 	}
 
 	public String getIconUrl() {

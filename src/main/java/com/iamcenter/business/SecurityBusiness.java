@@ -322,7 +322,7 @@ public class SecurityBusiness {
 		LoginVO loginVO = new LoginVO();
 		loginVO.setAccessToken(token);
 		loginVO.setUserId(entity.getLoginId());
-		loginVO.setNickName(entity.getNickName());
+		loginVO.setLoginAlias(entity.getLoginAlias());
 		loginVO.setLoginName(entity.getLoginName());
 		loginVO.setStatus(entity.getLoginState());
 		loginVO.setUserIcon(entity.getIconUrl());

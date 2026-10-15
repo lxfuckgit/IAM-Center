@@ -44,7 +44,7 @@ public class PartyPerson extends Party implements Serializable {
 	private String lastName;
 
 	/**
-	 * 用户姓名
+	 * 花名（昵称）
 	 */
 	@Column(name = "nick_name", length = 15)
 	private String nickName;

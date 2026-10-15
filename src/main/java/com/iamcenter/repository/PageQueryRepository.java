@@ -71,7 +71,7 @@ public class PageQueryRepository extends AbstractBizService {
 		params.add(companyId);
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("select a.id as party_id,a.code as party_code,a.last_name as party_name,a.sex,a.sfz as id_card,a.mobile_phone,status_id,c.party_id_from as dept_id,d.group_name as dept_name,g.login_id,g.login_name,g.nick_name,g.login_state,g.create_time ");
+		sb.append("select a.id as party_id,a.code as party_code,a.last_name as party_name,a.nick_name,a.sex,a.sfz as id_card,a.mobile_phone,status_id,c.party_id_from as dept_id,d.group_name as dept_name,g.login_id,g.login_name,g.login_alias,g.login_state,g.create_time ");
 		sb.append(" from sys_login g ");
 		sb.append(" left join hy102 a on g.party_id=a.id");
 		sb.append(" left join hy100 b on a.id=b.id");
