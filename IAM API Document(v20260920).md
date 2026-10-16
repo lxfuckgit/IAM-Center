@@ -105,7 +105,8 @@
 
 ```json
 {
-  "companyId":"ff80860000",	//所属公司标识（String，选填，不传则查询全部部门）
+  "deptCode":"ff80860000",	//部门编号（String，选填，精确匹配）
+  "deptName":"开发部",	//部门名称（String，选填，模糊匹配）
   "pageIndex":1,	//页码（int，选填）
   "pageSize":12		//每页条数（int，选填）
 }
@@ -230,6 +231,7 @@
 {
   "appId":"BHT_FFZ",	//应用标识（String，必填，服务端强制按 appId 过滤，防止跨应用查询）
   "name":"张",	//姓名关键字（String，选填，模糊匹配）
+  "statusId":"ENABLE",	//状态标识（String，选填）；
   "pageIndex":1,	//页码（int，选填）
   "pageSize":12		//每页条数（int，选填）
 }
@@ -243,8 +245,8 @@
         {
             "partyId": "4028eebb10002", //人员标识
             "partyCode": "P2024001",
+            "partyName": "生产员1",
             "mobilePhone": "",
-            "realname": "生产员1",
             "sex": "F",
             "realnameStatus": null, //实名状态
             "idCard": "430722198898765432",
@@ -292,6 +294,26 @@
 }
 ```
 
+#### 2.8 员工删除
+**接口路径**：`POST /iam/deletePerson`  
+**请求参数**：  
+
+```json
+{
+  "appId":"1790610735981",	//应用标识（String，必填）
+  "partyId":"0ebba1337001"	//人员标识（String，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": "",
+    "message": "请求成功!"
+}
+```
+
 #### 2.8 员工查询
 **接口路径**：`GET /iam/getPerson/{partyId}`  
 **请求参数**：无请求体，人员标识通过路径参数传递。  
@@ -324,13 +346,36 @@
 
 ```json
 {
+  "deptId":"ff8002960002",	//部门标识（String，选填）
   "partyId":"ff8002960002",	//人员标识（String，必填，为空返回 40000003）
   "code":"P0001",	//人员编号（String，选填）
   "name":"张三丰",	//姓名（String，选填）
+  "idCard":"3301******0011",	//身份证号（String，选填）
+  "nickName":"张三丰",	//昵称（String，选填）
+  "mobilePhone":"13800138000",	//手机号（String，选填）
   "sex":"M",		//性别（String/Char，选填）
   "birthday":"1990-01-01",	//出生日期（Date/String，选填）
-  "iconId":"icon-001",	//头像标识（String，选填）
-  "idCard":"3301******0011"	//身份证号（String，选填）
+  "iconId":"icon-001"	//头像标识（String，选填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": null,
+    "message": "请求成功!"
+}
+```
+
+#### 2.10 员工状态修改
+**接口路径**：`PUT /iam/changePartyStatus`  
+**请求参数**：  
+
+```json
+{
+  "partyId":"ff8002960002",	//人员标识（String，必填）
+  "statusId":"ENABLE"	//状态标识（String，必填）
 }
 ```
 **响应报文**：
@@ -370,7 +415,7 @@
         {
             "loginId": 10001,
             "loginName": "zhangsan",
-            "nickName": "张三",
+            "loginAlias": "张三",
             "loginState": "ENABLE"
         }
     ],
@@ -379,6 +424,73 @@
     "pageSize": 12,
     "message": "请求成功!",
     "totalRecord": 1
+}
+```
+
+#### 3.1 账号列表
+**接口路径**：`POST /iam/listLoginV2`  
+**请求参数**：  
+
+```json
+{
+  "appId":"BHT_FFZ",	//应用标识（String，必填）
+  "loginName":"zhangsan",	//登录账号（String，选填）
+  "partyCode":"P1001",		//人员编号（String，选填）
+  "mobilePhone":"18812345678",	//人员电话（String，选填）
+  "statusId":"ENABLE",	//状态标识（String，选填）
+  "pageIndex":1,	//页码（int，选填）
+  "pageSize":12		//每页条数（int，选填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": [
+        {
+            "loginId": 10001,	//账号标识
+            "loginName": "zhangsan",	//登录名称
+            "nickName": "张三",	//登录昵称
+            "loginState": "ENABLE",	//账号状态
+            "createTime": "2026-10-15 18:11:02",	//账号创建时间
+            "partyId": "edsdfeujd",	//人员标识
+            "partyCode": "P2024001",	//人员编号
+            "partyName": "生产员1",	//人员姓名
+            "mobilePhone": "",	//人员电话
+            "sex": "F",	//人员性别
+            "idCard": "430722198898765432",	//身份证编号
+            "deptId": "4028eebba133740c01a13378abd50000",	//部门标识
+            "deptName": "生产1部"	//部门名称
+        }
+    ],
+    "pageIndex": 1,
+    "totalPages": 1,
+    "pageSize": 12,
+    "message": "请求成功!",
+    "totalRecord": 1
+}
+```
+
+#### 3.3 账号已存在的角色ID列表
+**接口路径**：`POST /iam/listLoginRoleIds`  
+**请求参数**：  
+
+```json
+{
+  "appId":"1791610900066",	//应用标识（String，必填）
+  "loginId":":"916109000"	//账号标识（String，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "message": "请求成功!",
+    "data": [
+        1007
+    ]
 }
 ```
 
@@ -391,6 +503,7 @@
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "roleCode":"ADMIN",	//角色编码（String，选填）
   "roleName":"管理员",	//角色名称（String，选填）
+  "statusId":"ENABLE",	//状态标识（String，选填）
   "pageIndex":1,	//页码（int，选填）
   "pageSize":12		//每页条数（int，选填）
 }
@@ -452,7 +565,7 @@
 {
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "roleId":1,	//角色标识（Long，必填）
-  "roleCode":"ADMIN",	//角色编码（String，必填）
+  "roleCode":"ADMIN",	//角色编码（String，选填；不支持修改）
   "roleName":"超级管理员",	//角色名称（String，必填）
   "statusId":"ENABLE",	//状态标识（String，选填）
   "sequence":"1",	//排序号（String，选填）
@@ -610,12 +723,13 @@
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "parentId":"0",	//父资源标识（String，选填）
   "resType":"Menu",	//资源类型（String，必填）：System/Menu/Function
-  "resCode":"user:list",	//资源编号/权限标识（String，必填）
+  "resCode":"user:list",	//资源编号（String，选填）；不可修改；
   "resName":"用户管理",	//资源名称（String，必填）
   "resIcon":"icon-user",	//资源图标（String，选填）
   "resUrl":"/system/user",	//资源跳转地址（String，选填）
   "resRemark":"用户管理菜单",	//资源描述（String，选填）
-  "sequence":1		//排序号（Integer，选填）
+  "sequence":1,		//排序号（Integer，选填）
+  "statusId":"ENABLE"	//状态标识（String，选填）
 }
 ```
 **响应报文**：
@@ -689,6 +803,31 @@
     "message": "请求成功!"
 }
 ```
+
+#### 3.14 角色关联的资源ID列表
+**接口路径**：`POST /iam/listRoleResourceIds`  
+**请求参数**：  
+
+```json
+{
+  "appId":"BHT_FFZ",	//应用标识（String，必填）
+  "roleId":1		//角色标识（Long，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "message": "请求成功!",
+    "data": [
+        18, //资源标识（resId)
+        19,
+        20
+    ]
+}
+```
+
 
 ## 4、账号认证管理  
 #### 4.1 注册账号（用户名＋密码模式）
@@ -851,8 +990,54 @@ Authorization: ff8080819f360237019f360602960000
 }
 ```
 
-
-
-
 #### 2.10 更新账号资料
---资料包含：
+--暂无
+
+#### 2.12 账号关联的授权信息
+**接口路径**：`POST /iam/getAuthorizationInfo`  
+**请求参数**：  
+
+```json
+{
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": {
+        "menuList": [	//菜单树列表
+            {
+                "menuPath": "",	//菜单路径
+                "menuIcon": null,	//菜单图标
+                "menuId": 15,		//菜单标识
+                "menuName": "客服资料",	//菜单名称
+                "childList": [
+                    {
+                        "menuPath": "",
+                        "menuIcon": null,
+                        "menuId": 18,
+                        "menuName": "客服资料1",
+                        "parentId": 15
+                    }
+                ],
+                "parentId": 0
+            }
+        ],
+        "roleList": [  	//角色列表
+            "2N5X22TG",  	//角色编号
+            "JZ8AU32BEM"
+        ],
+        "privilegeList": [
+            "NH67GT2PR1",  	//权限编号
+            "M5OUUCHFX8",
+            "5E0KXFV1IV"
+        ]
+    },
+    "message": "请求成功!"
+}
+```
+
+
+
