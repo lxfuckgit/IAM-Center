@@ -1,6 +1,5 @@
 package com.iamcenter.controller;
 
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +26,8 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/iam")
 //@RequestMapping("/iam/auth")
 public class AuthenticationController {
-	@DubboReference(timeout = 5000, check = false)
+	@org.springframework.beans.factory.annotation.Autowired
+//	@org.apache.dubbo.config.annotation.DubboReference(timeout = 5000, check = false)
 	private AuthContract authContract;
 
 	@PostMapping(value = "/sendRegSms")

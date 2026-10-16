@@ -6,10 +6,10 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.dubbo.config.annotation.DubboService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.PartyBusiness;
@@ -56,7 +56,7 @@ import com.saasapi.contract.party.vo.DepartmentVO;
 import com.saasapi.contract.party.vo.PersonVO;
 import com.saasapi.contract.party.vo.Supplier;
 
-@DubboService
+@Service
 public class PartyService implements PartyContract {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 

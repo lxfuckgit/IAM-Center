@@ -3,7 +3,6 @@ package com.iamcenter.controller;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,7 +43,7 @@ public class OrganizationController {
 	@Autowired
 	private PartyGroupRepository partyGroupRepository;
 
-	@DubboReference
+	@Autowired
 	private PartyContract partyService;
 	
 	@RequestMapping("/listCompany")

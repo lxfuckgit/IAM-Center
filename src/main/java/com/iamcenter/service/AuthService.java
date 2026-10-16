@@ -2,12 +2,12 @@ package com.iamcenter.service;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.dubbo.config.annotation.DubboService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import com.iamcenter.business.SecurityBusiness;
@@ -44,7 +44,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@DubboService
+@Service
 public final class AuthService implements AuthContract {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -111,7 +111,7 @@ public final class AuthService implements AuthContract {
 		entity.setLoginName(dto.getUsername());
 		entity.setLoginPwd(dto.getPassword());
 		entity.setVersion(dto.getVersion());
-		entity.setNickName(dto.getNickName());
+		entity.setLoginAlias(dto.getLoginAlias());
 		entity.setLoginState(dto.getStatusId());
 		entity.setPartyId(dto.getPartyId());
 		return securityBusiness.doRegister(entity, dto.getRoleList());
@@ -539,7 +539,7 @@ public final class AuthService implements AuthContract {
 		LoginVO vo = new LoginVO();
 		Optional<SysLogin> optional = sysLoginRepository.findById(loginId);
 		if (optional.isPresent()) {
-			vo.setNickName(optional.get().getNickName());
+			vo.setLoginAlias(optional.get().getLoginAlias());
 			vo.setUserIcon(optional.get().getIconUrl());
 		}
 		return ResultBuilder.normalResult(vo);

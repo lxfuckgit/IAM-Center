@@ -179,7 +179,7 @@ public class AppInfoService extends AbstractBizService implements AppsContract {
 		userLogin.setAppId(appId);
 		userLogin.setLoginName(dto.getAppCode());
 		userLogin.setLoginPwd(Constant.DEFAULT_PWD);
-		userLogin.setNickName(dto.getAppName());
+		userLogin.setLoginAlias(dto.getAppName());
 		userLogin.setVersion(Constant.DEFAULT_VERSION);
 		RstResult<String> r2 = securityBusiness.doRegister(userLogin, List.of(String.valueOf(userRole.getId())));
 		logger.info("--->应用管理员创建结果：{}", dto.getAppName(), r2.getCode());

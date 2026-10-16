@@ -8,12 +8,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.dubbo.config.annotation.DubboService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.iamcenter.business.RBACBusiness;
@@ -66,7 +66,7 @@ import com.saasapi.contract.security.vo.RoleVO;
  * @author lx
  * 
  */
-@DubboService
+@Service
 public class SecurityService implements SecurityContract {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	
