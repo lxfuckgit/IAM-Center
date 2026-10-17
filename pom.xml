@@ -40,12 +40,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
-            <exclusions>
-            	<exclusion>
-            		<groupId>org.jboss.logging</groupId>
-            		<artifactId>jboss-logging</artifactId>
-            	</exclusion>
-            </exclusions>
+            <!-- 强依赖jboss-logging框架 -->
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -88,11 +88,13 @@ public class RBACBusiness extends AbstractBizService {
 	
 	public List<MenuVO> listLoginMenu(Long loginId) {
 		// 备注：这里直接写SQL是觉得jdbcTemplate比jpaRepository性能高。
+		// 思路：先用覆盖索引把"用户能访问的 resource_id"算成小集合，再主键回表，不重复、不扫全表。
 		/* 1、查询【登录用户】关联【角色】的（有效）菜单数据 */
 		StringBuffer sb = new StringBuffer();
 		sb.append("select b.id as menu_id,b.res_code,b.res_name as menu_name,b.res_url as menu_path,b.res_icon as menu_icon,b.parent_id ");
-		sb.append("from sys_role_resource a left join sys_resource b on a.resource_id=b.id ");
-		sb.append("where a.role_id in(select role_id from sys_login_role where login_id=?) and b.res_type='Menu' and b.status_id='ENABLE' ");
+		sb.append("from (select distinct a.resource_id from sys_login_role lr join sys_role_resource a on a.role_id = lr.role_id where lr.login_id =?) u ");
+		sb.append("join sys_resource b on b.id = u.resource_id " );
+		sb.append("where b.res_type='Menu' and b.status_id='ENABLE' ");
 		sb.append("order by parent_id,sequence");
 		List<MenuVO> menuList = jdbcTemplate.query(sb.toString(), new BeanPropertyRowMapper<MenuVO>(MenuVO.class), loginId);
 

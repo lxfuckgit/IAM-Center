@@ -34,6 +34,7 @@ import com.javapai.framework.action.ResultBuilder;
 import com.javapai.framework.action.RstResult;
 import com.javapai.framework.common.vo.tree.TreeVO;
 import com.javapai.framework.enums.ErrorCode;
+import com.javapai.framework.enums.StatusEnum;
 import com.javapai.framework.utils.UtilDateTime;
 import com.saasapi.contract.security.SecurityContract;
 import com.saasapi.contract.security.dto.LoginListDTO;
@@ -669,10 +670,11 @@ public class SecurityService implements SecurityContract {
 		Set<String> privilegeCodeSet = new HashSet<String>();
 		// 读取用户的角色权限
 		List<SysRole> roleList = rbacBusiness.listLoginRole(loginId);
-		roleList.stream().forEach(role -> {
-			roleCodeSet.add(role.getRoleCode());
-			privilegeCodeSet.addAll(rbacBusiness.listRoleResourceCode(role.getId()));
-		});
+		roleList.stream().filter(predicate -> !predicate.getStatusId().equals(StatusEnum.DISABLE.getValue()))
+				.forEach(role -> {
+					roleCodeSet.add(role.getRoleCode());
+					privilegeCodeSet.addAll(rbacBusiness.listRoleResourceCode(role.getId()));
+				});
 		// 返回用户授权信息
 		AuthorizationVO vo = new AuthorizationVO();
 		vo.setRoleList(roleCodeSet);
