@@ -40,7 +40,7 @@ import com.saasapi.contract.party.PartyContract;
 import com.saasapi.contract.party.dto.CompanyCreateDTO;
 import com.saasapi.contract.party.dto.CompanyListDTO;
 import com.saasapi.contract.party.dto.CompanyUpdateDTO;
-import com.saasapi.contract.party.dto.DepartmentListDTO;
+import com.saasapi.contract.party.dto.DeptListDTO;
 import com.saasapi.contract.party.dto.DeptCreateDTO;
 import com.saasapi.contract.party.dto.DeptOwnerDTO;
 import com.saasapi.contract.party.dto.DeptUpdateDTO;
@@ -54,6 +54,7 @@ import com.saasapi.contract.party.enums.PartyType;
 import com.saasapi.contract.party.enums.RoleTypeEnum;
 import com.saasapi.contract.party.vo.CompanyVO;
 import com.saasapi.contract.party.vo.DepartmentVO;
+import com.saasapi.contract.party.vo.DeptTreeVO;
 import com.saasapi.contract.party.vo.PersonVO;
 import com.saasapi.contract.party.vo.Supplier;
 
@@ -162,7 +163,19 @@ public class PartyService implements PartyContract {
 	}
 	
 	@Override
-	public PageResult<DepartmentVO> listDepartment(DepartmentListDTO dto) {
+	public RstResult<List<DeptTreeVO>> treeDepartment(DeptListDTO dto) {
+		String companyId = tokenBusiness.getTokenAssocCompanyId();
+		if (StringUtils.isEmpty(companyId)) {
+			logger.info("--->[{}]公司标识信息不明确！", dto.getCompanyId());
+			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+		List<DeptTreeVO> treeList = partyBusiness.listChildDept(companyId);
+		treeList.stream().forEach(action -> action.setChildList(partyBusiness.listChildDept(action.getDeptId())));
+		return ResultBuilder.normalResult(treeList);
+	}
+
+	@Override
+	public PageResult<DepartmentVO> listDepartment(DeptListDTO dto) {
 		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(tokenBusiness.getTokenAssocAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return ResultBuilder.buildPageResult(dto.getPageIndex(), dto.getPageSize());
@@ -207,7 +220,11 @@ public class PartyService implements PartyContract {
 		pg.setCode(dto.getDeptCode());
 		pg.setName(dto.getDeptName());
 		pg.setHeadPartyId(dto.getHeadPartyId());
-		pg.setParentId(checkAppResult.getData().getCompanyId());
+		if (StringUtils.isNotBlank(dto.getParentId())) {
+			pg.setParentId(dto.getParentId());
+		} else {
+			pg.setParentId(checkAppResult.getData().getCompanyId());
+		}
 		pg.setParentSeq(dto.getDeptSeq());
 		return createPartyGroup(pg);
 	}
@@ -236,20 +253,20 @@ public class PartyService implements PartyContract {
 		if (StringUtils.isBlank(checkAppResult.getData().getCompanyId())) {
 			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
 		}
-		if (partyBusiness.checkCompanyDeptCode(checkAppResult.getData().getCompanyId(), dto.getDeptCode())) {
-			return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
-		}
-		if (partyBusiness.checkCompanyDeptName(checkAppResult.getData().getCompanyId(), dto.getDeptName())) {
-			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
-		}
 		Optional<PartyGroup> optional = partyGroupRepository.findById(dto.getDeptId());
 		if (optional.isEmpty()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
 		}
-		if (StringUtils.isNotBlank(dto.getDeptCode())) {
+		if (StringUtils.isNotBlank(dto.getDeptCode()) && !optional.get().getGroupCode().equals(dto.getDeptCode())) {
+			if (partyBusiness.checkCompanyDeptCode(checkAppResult.getData().getCompanyId(), dto.getDeptCode())) {
+				return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
+			}
 			optional.get().setGroupCode(dto.getDeptCode());
 		}
-		if (StringUtils.isNotBlank(dto.getDeptName())) {
+		if (StringUtils.isNotBlank(dto.getDeptName()) && !optional.get().getGroupName().equals(dto.getDeptName())) {
+			if (partyBusiness.checkCompanyDeptName(checkAppResult.getData().getCompanyId(), dto.getDeptName())) {
+				return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
+			}
 			optional.get().setGroupName(dto.getDeptName());
 		}
 		if (StringUtils.isNotBlank(dto.getStatusId())) {
@@ -436,15 +453,33 @@ public class PartyService implements PartyContract {
 		}
 		
 		/* 1、update base info */
-		optional.get().setCode(dto.getCode());
-		optional.get().setFirstName(dto.getName());
-		optional.get().setLastName(dto.getName());
-		optional.get().setNickName(dto.getNickName());
-		optional.get().setIdCard(dto.getIdCard());
-		optional.get().setSex(dto.getSex());
-		optional.get().setMobilePhone(dto.getMobilePhone());
-		optional.get().setBirthday(dto.getBirthday());
-//		optional.get().setIconId(dto.getIconId());
+		if (dto.getCode() != null) {
+			optional.get().setCode(dto.getCode());
+		}
+		if (dto.getName() != null) {
+			optional.get().setFirstName(dto.getName());
+		}
+		if (dto.getName() != null) {
+			optional.get().setLastName(dto.getName());
+		}
+		if (dto.getNickName() != null) {
+			optional.get().setNickName(dto.getNickName());
+		}
+		if (dto.getIdCard() != null) {
+			optional.get().setIdCard(dto.getIdCard());
+		}
+		if (dto.getSex() != null) {
+			optional.get().setSex(dto.getSex());
+		}
+		if (dto.getMobilePhone() != null) {
+			optional.get().setMobilePhone(dto.getMobilePhone());
+		}
+		if (dto.getBirthday() != null) {
+			optional.get().setBirthday(dto.getBirthday());
+		}
+		// if (dto.getIconId() != null) {
+//		     optional.get().setIconId(dto.getIconId());
+		// }
 		partyPersonDao.save(optional.get());
 
 		/* 2、update contact info */
@@ -519,11 +554,15 @@ public class PartyService implements PartyContract {
 			logger.error("----------->当前团体名称{}已存在，请更换新名称!", dto.getName());
 			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
 		}
+		String parentRoleId = RoleTypeEnum.ROLE_ORG.getKey();
 		if (StringUtils.isNotBlank(dto.getParentId())) {
 			Optional<Party> optional = partyDao.findById(dto.getParentId());
 			if (!optional.isPresent()) {
 				logger.error("----------->团体关联上级不存在，请检查并更换!", dto.getName());
 				return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
+			} else {
+				parentRoleId = optional.get().getRoleTypeId();
+				logger.error("----------->团体ParentRole重置为：{}", parentRoleId);
 			}
 		}
 
@@ -541,7 +580,7 @@ public class PartyService implements PartyContract {
 		/* 保存上下级关系 */
 		if (StringUtils.isNotBlank(dto.getParentId())) {
 			PartyRelation relation = new PartyRelation();
-			relation.setId(new PartyRelationId(dto.getParentId(), RoleTypeEnum.ROLE_COMPANY.getKey(), pg.getPartyId(), dto.getRoleType().name()));
+			relation.setId(new PartyRelationId(dto.getParentId(), parentRoleId, pg.getPartyId(), dto.getRoleType().name()));
 			relation.setRelationTypeId(PartyRelationType.PARENT_CHILD.getKey());
 			relation.setSequence(dto.getParentSeq());
 			partyRelationDao.save(relation);

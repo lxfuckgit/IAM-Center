@@ -23,7 +23,7 @@ import com.saasapi.contract.party.PartyContract;
 import com.saasapi.contract.party.dto.CompanyCreateDTO;
 import com.saasapi.contract.party.dto.CompanyListDTO;
 import com.saasapi.contract.party.dto.CompanyUpdateDTO;
-import com.saasapi.contract.party.dto.DepartmentListDTO;
+import com.saasapi.contract.party.dto.DeptListDTO;
 import com.saasapi.contract.party.dto.DeptCreateDTO;
 import com.saasapi.contract.party.dto.DeptOwnerDTO;
 import com.saasapi.contract.party.dto.DeptUpdateDTO;
@@ -33,6 +33,7 @@ import com.saasapi.contract.party.dto.PersonListDTO;
 import com.saasapi.contract.party.dto.PersonUpdateDTO;
 import com.saasapi.contract.party.vo.CompanyVO;
 import com.saasapi.contract.party.vo.DepartmentVO;
+import com.saasapi.contract.party.vo.DeptTreeVO;
 import com.saasapi.contract.party.vo.PersonVO;
 
 @RestController
@@ -69,8 +70,13 @@ public class OrganizationController {
 		return partyService.deleteCompany(dto);
 	}
 	
+	@RequestMapping("/treeDepartment")
+	public RstResult<List<DeptTreeVO>> treeDepartment(@RequestBody DeptListDTO dto) {
+		return partyService.treeDepartment(dto);
+	}
+	
 	@RequestMapping("/listDepartment")
-	public PageResult<DepartmentVO> listDepartment(@RequestBody DepartmentListDTO dto) {
+	public PageResult<DepartmentVO> listDepartment(@RequestBody DeptListDTO dto) {
 		return partyService.listDepartment(dto);
 	}
 	
