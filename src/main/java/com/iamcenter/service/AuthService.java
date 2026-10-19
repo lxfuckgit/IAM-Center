@@ -345,10 +345,6 @@ public final class AuthService implements AuthContract {
 		if (StringUtils.isEmpty(dto.getLoginName())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_USERNAME);
 		}
-		if (StringUtils.isEmpty(dto.getNewPassword())) {
-			dto.setNewPassword(Constant.DEFAULT_PWD);
-			logger.info("--->系统未检测到新密码，将重置为默认密码！");
-		}
 		/* 验证密码规则（重置密码时不需要验证规则） */
 //		RstResult<String> rule = validatePasswordRule(dto.getPassword());
 //		if (!ResultBuilder.RESPONSE_OK.equals(rule.getMessage())) {
@@ -361,8 +357,9 @@ public final class AuthService implements AuthContract {
 			return ResultBuilder.buildResult(ErrorCode.ERROR_LOGIN);
 		}
 		
-		/* 1:修改用户密码 */
-		login.setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, dto.getNewPassword()));
+		/* 1:重置用户密码 */
+		// 后续可以配置各应用的默认密码进行重置。
+		login.setLoginPwd(encoderStrategy.encoderPassword(EncoderStrategy.BCrypt, Constant.DEFAULT_PWD));
 		sysLoginRepository.save(login);
 		logger.info("--->用户({})密码更新完成！", login.getLoginName());
 
@@ -377,7 +374,9 @@ public final class AuthService implements AuthContract {
 		logger.info("--->用户({})密码更新日志完成！", login.getLoginName());
 
 		/* 3：登录token失效 */
-		securityBusiness.doLogout(login.getLoginToken());
+		if (StringUtils.isNotBlank(login.getLoginToken())) {
+			securityBusiness.doLogout(login.getLoginToken());
+		}
 		return ResultBuilder.normalResult();
 	}
 

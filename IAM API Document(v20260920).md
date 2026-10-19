@@ -11,6 +11,10 @@
 	
 - **v20261013**（iam_admin）  
 	1、新增接口（assignDepartmentOwner）
+	
+- **v20261017**（iam_admin）  
+	1、新增接口（restoreLoginRoles）
+	
 
 ## 1. 通用约定  
 - **功能说明**：本文档接口包括公司、部门（团体）、人员、权限等相关功能的的增删改查。
@@ -166,7 +170,7 @@
     "deptId": "ff808023a30000",	//部门标识（String，必填）
     "deptCode": "Dx819f6060",	  //部门编号（String，必填）
     "deptName": "测试2部",	  //部门名称（String，必填）
-    "deptSeq": 3, //部门排序号（String，选填）
+    "deptSeq": 3, //部门排序号（String，选填）；提示：期望的序号值为正整数；
     "statusId":"ENABLE",	//状态标识（String，必填）；
     "headPartyId": "ff8080860001", //负责人标识（String，选填）
     "remark":"备注说明",	//部门描述（String，选填）；
@@ -436,6 +440,7 @@
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "loginName":"zhangsan",	//登录账号（String，选填）
   "partyCode":"P1001",		//人员编号（String，选填）
+  "partyName":"P1001",		//人员名称（String，选填）
   "mobilePhone":"18812345678",	//人员电话（String，选填）
   "statusId":"ENABLE",	//状态标识（String，选填）
   "pageIndex":1,	//页码（int，选填）
@@ -632,6 +637,28 @@
   "appId":"BHT_FFZ",	//应用标识（String，必填）
   "loginId":10001,	//登录账号标识（Long，必填）
   "roleId":1		//角色标识（Long，必填）
+}
+```
+**响应报文**：
+
+```json
+{
+    "code": "00000000",
+    "data": null,
+    "message": "请求成功!"
+}
+```
+
+#### 3.9 账号重配角色
+**接口路径**：`POST /iam/restoreLoginRoles`  
+**接口描述**：`清除当前用户历史所有角色，只保留当前最新指定的角色。`  
+**请求参数**：  
+
+```json
+{
+  "appId":"BHT_FFZ",	//应用标识（String，必填）
+  "loginId":10001,	//登录账号标识（Long，必填）
+  "roleIdList":[1,2]		//角色标识列表（List，必填）
 }
 ```
 **响应报文**：

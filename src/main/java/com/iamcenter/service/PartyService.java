@@ -17,6 +17,7 @@ import com.iamcenter.business.RBACBusiness;
 import com.iamcenter.business.TokenBusiness;
 import com.iamcenter.business.ValidateBusiness;
 import com.iamcenter.common.code.PartyErrorCode;
+import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.domain.party.Party;
 import com.iamcenter.domain.party.PartyGroup;
 import com.iamcenter.domain.party.PartyPerson;
@@ -71,24 +72,24 @@ public class PartyService implements PartyContract {
 
 	@Autowired
 	private RBACBusiness rbacBusiness;
-	
+
 	@Autowired
 	private PartyBusiness partyBusiness;
-	
+
 	@Autowired
 	private ValidateBusiness validateBusiness;
-	
+
 	@Autowired
 	private TokenBusiness tokenBusiness;
-	
+
 	@Autowired
 	AppInfoRepository appInfoRepository;
 	@Autowired
 	PageQueryRepository pageQueryRepository;
-	
+
 	@Autowired
 	private SysLoginRepository sysLoginRepository;
-	
+
 	@Override
 	public PageResult<CompanyVO> listCompany(CompanyListDTO dto) {
 		if (!tokenBusiness.hasSuperAdminRole()) {
@@ -101,7 +102,7 @@ public class PartyService implements PartyContract {
 		}
 		return pageQueryRepository.listCompany(dto);
 	}
-	
+
 	@Override
 	public RstResult<String> createCompany(CompanyCreateDTO dto) {
 		GroupCreateDTO pg = new GroupCreateDTO();
@@ -146,10 +147,10 @@ public class PartyService implements PartyContract {
 
 	@Override
 	public RstResult<String> deleteCompany(CompanyUpdateDTO dto) {
-		if(StringUtils.isBlank(dto.getCompanyId())) {
+		if (StringUtils.isBlank(dto.getCompanyId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
 		}
-		
+
 		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getCompanyId());
 		if (null != prList && prList.size() > 0) {
 			logger.info("--->[{}]公司信息存在引用关系！", dto.getCompanyId());
@@ -184,23 +185,29 @@ public class PartyService implements PartyContract {
 		});
 		return pageList;
 	}
-	
+
 	@Override
 	@Transactional
 	public RstResult<String> createDepartment(DeptCreateDTO dto) {
-		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(tokenBusiness.getTokenAssocAppId());
+		RstResult<AppInfo> checkAppResult = validateBusiness.getLoginAppInfo(tokenBusiness.getTokenAssocAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
-			return checkAppResult;
-		}
-		if (StringUtils.isBlank(checkAppResult.getData())) {
 			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+		if (StringUtils.isBlank(checkAppResult.getData().getCompanyId())) {
+			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+		if (partyBusiness.checkCompanyDeptCode(checkAppResult.getData().getCompanyId(), dto.getDeptCode())) {
+			return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
+		}
+		if (partyBusiness.checkCompanyDeptName(checkAppResult.getData().getCompanyId(), dto.getDeptName())) {
+			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
 		}
 		GroupCreateDTO pg = new GroupCreateDTO();
 		pg.setRoleType(RoleTypeEnum.ROLE_DETP);
 		pg.setCode(dto.getDeptCode());
 		pg.setName(dto.getDeptName());
 		pg.setHeadPartyId(dto.getHeadPartyId());
-		pg.setParentId(checkAppResult.getData());
+		pg.setParentId(checkAppResult.getData().getCompanyId());
 		pg.setParentSeq(dto.getDeptSeq());
 		return createPartyGroup(pg);
 	}
@@ -222,6 +229,19 @@ public class PartyService implements PartyContract {
 	@Override
 	@Transactional
 	public RstResult<String> updateDepartment(DeptUpdateDTO dto) {
+		RstResult<AppInfo> checkAppResult = validateBusiness.getLoginAppInfo(tokenBusiness.getTokenAssocAppId());
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+		if (StringUtils.isBlank(checkAppResult.getData().getCompanyId())) {
+			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+		if (partyBusiness.checkCompanyDeptCode(checkAppResult.getData().getCompanyId(), dto.getDeptCode())) {
+			return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
+		}
+		if (partyBusiness.checkCompanyDeptName(checkAppResult.getData().getCompanyId(), dto.getDeptName())) {
+			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
+		}
 		Optional<PartyGroup> optional = partyGroupRepository.findById(dto.getDeptId());
 		if (optional.isEmpty()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
@@ -247,20 +267,35 @@ public class PartyService implements PartyContract {
 //			// 当部门负责人不一致时进行更新
 //			partyBusiness.updateDeptPartyOwner(optional.get().getPartyId(), dto.getHeadPartyId(), person.getPartyId());
 //		}
-		
+		/* 修改部门排序号 */
+		if (null != dto.getDeptSeq() && dto.getDeptSeq() > 0) {
+			String relationTypeId = PartyRelationType.PARENT_CHILD.getKey();
+			List<PartyRelation> list = partyRelationDao.findByIdPartyIdToAndRelationTypeId(dto.getDeptId(),
+					relationTypeId);
+			if (null == list || list.size() == 0) {
+				logger.info("--->[{}]部门未关联公司信息！", dto.getDeptId());
+			}
+			if (!dto.getDeptSeq().equals(list.get(0).getSequence())) {
+				list.get(0).setSequence(dto.getDeptSeq());
+				partyRelationDao.save(list.get(0));
+				logger.info("--->[{}]部门排序号[{}]更新完毕！", dto.getDeptId(), dto.getDeptSeq());
+			}
+		}
+
 		return ResultBuilder.normalResult();
 	}
-	
+
 	@Override
 	@Transactional
 	public RstResult<String> deleteDepartment(DeptUpdateDTO dto) {
-		if(StringUtils.isBlank(dto.getDeptId())) {
+		if (StringUtils.isBlank(dto.getDeptId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
 		}
-		
+
 		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getDeptId());
 		if (null != prList && prList.size() > 0) {
 			logger.info("--->[{}]部门信息存在引用关系！", dto.getDeptId());
+			return ResultBuilder.buildResult(PartyErrorCode.ERROR_HAS_CHILD);
 		}
 		
 		partyRelationDao.deleteAll(partyRelationDao.findByIdPartyIdTo(dto.getDeptId()));
@@ -285,7 +320,7 @@ public class PartyService implements PartyContract {
 		}
 		return ResultBuilder.normalResult();
 	}
-	
+
 	@Override
 	public PageResult<PersonVO> listPerson(PersonListDTO dto) {
 		PageResult<PersonVO> pageList = pageQueryRepository.listPerson(dto);
@@ -328,7 +363,7 @@ public class PartyService implements PartyContract {
 				return ResultBuilder.buildResult("40000001", "部门信息不存在！");
 			}
 		}
-		
+
 		/* 1、人员信息创建 */
 		PartyPerson person = new PartyPerson();
 		person.setPartyTypeId(PartyType.PPERSON.getKey());
@@ -347,7 +382,8 @@ public class PartyService implements PartyContract {
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
 			String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
 			String relationType = PartyRelationType.PARENT_CHILD.getKey();
-			partyBusiness.createRelation(dto.getDeptId(), roleIdFrom, person.getPartyId(), person.getRoleTypeId(), relationType);
+			partyBusiness.createRelation(dto.getDeptId(), roleIdFrom, person.getPartyId(), person.getRoleTypeId(),
+					relationType);
 			logger.info("--->[{}]成员关系创建完成 ...", person.getLastName());
 		}
 
@@ -368,12 +404,12 @@ public class PartyService implements PartyContract {
 			// bind pId to loginId(mq sent to:);
 //			personBusines.bindPartyId2LoginId();
 		}
-		
+
 		RstResult<String> result = ResultBuilder.normalResult();
 		result.setData(person.getPartyId());
 		return result;
 	}
-	
+
 	@Override
 	@Transactional
 	public RstResult<String> deletePerson(String partyId) {
@@ -411,10 +447,10 @@ public class PartyService implements PartyContract {
 //		optional.get().setIconId(dto.getIconId());
 		partyPersonDao.save(optional.get());
 
-		/*2、update contact info*/
+		/* 2、update contact info */
 		// contactBusiness.updateContact(xxx);
-		
-		/*3、update dept info*/
+
+		/* 3、update dept info */
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
 			partyBusiness.updatePartyToDept(dto.getPartyId(), dto.getDeptId());
 		}
@@ -479,15 +515,15 @@ public class PartyService implements PartyContract {
 			return ResultBuilder.buildResult("40000001", "团体类型不能为空");
 		}
 		PartyGroup object = partyGroupRepository.findByGroupCodeAndGroupName(dto.getCode(), dto.getName());
-		if(null != object) {
+		if (null != object) {
 			logger.error("----------->当前团体名称{}已存在，请更换新名称!", dto.getName());
 			return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
 		}
 		if (StringUtils.isNotBlank(dto.getParentId())) {
 			Optional<Party> optional = partyDao.findById(dto.getParentId());
-			if(!optional.isPresent()) {
+			if (!optional.isPresent()) {
 				logger.error("----------->团体关联上级不存在，请检查并更换!", dto.getName());
-				return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);	
+				return ResultBuilder.buildResult(ErrorCode.EXIST_NAME);
 			}
 		}
 
@@ -537,19 +573,37 @@ public class PartyService implements PartyContract {
 //		}).collect(Collectors.toList()));
 		return null;
 	}
-	
+
 	@Override
 	public RstResult<String> changePartyStatus(PartyStatusChangeDTO dto) {
-		if (StringUtils.isNotBlank(dto.getPartyId()) || StringUtils.isNotBlank(dto.getStatusId())) {
+		if (StringUtils.isBlank(dto.getPartyId()) || StringUtils.isBlank(dto.getStatusId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		}
+		if (!StatusEnum.ENABLE.getValue().equals(dto.getStatusId()) && !StatusEnum.DISABLE.getValue().equals(dto.getStatusId())) {
+			return ResultBuilder.buildResult(ErrorCode.INVALID_CODE, "无效状态码，请检查！");
 		}
 		/* 查询组织信息 */
 		Optional<Party> optional = partyDao.findById(dto.getPartyId());
 		if (optional.isEmpty()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
 		}
+//		String appId = tokenBusiness.getTokenAssocAppId();
+//		if (StringUtils.isNotBlank(appId) && (!optional.get().getAppId().equals(appId))) {
+//			logger.info("--->警告：用户({})非法访问数据！", dto.getPartyId());
+//			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
+//		}
+		/* 设置人员状态 */
 		optional.get().setStatusId(dto.getStatusId());
 		partyDao.save(optional.get());
+		/* 设置账号状态 */
+		List<SysLogin> loginList = sysLoginRepository.findByPartyId(dto.getPartyId());
+		if (null != loginList && loginList.size() > 0) {
+			loginList.forEach(login -> {
+				login.setLoginState(dto.getStatusId());
+				sysLoginRepository.save(login);
+			});
+		}
+		/* 返回请求结果 */
 		return ResultBuilder.normalResult();
 	}
 
@@ -564,7 +618,7 @@ public class PartyService implements PartyContract {
 	}
 
 	public RstResult<String> addRelation(String partyIdFrom, String partyIdTo, String relationTypeId) {
-		if (StringUtils.isEmpty(partyIdFrom)||StringUtils.isEmpty(partyIdTo)) {
+		if (StringUtils.isEmpty(partyIdFrom) || StringUtils.isEmpty(partyIdTo)) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 		}
 		if (StringUtils.isEmpty(relationTypeId)) {

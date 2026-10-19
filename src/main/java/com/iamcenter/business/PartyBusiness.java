@@ -46,6 +46,37 @@ public class PartyBusiness extends AbstractBizService {
 	}
 	
 	/**
+	 * 查询公司是否存指定部门编号。
+	 * 
+	 * @param companyId 公司标识
+	 * @param deptCode  部门编号
+	 * @return
+	 */
+	public boolean checkCompanyDeptCode(String companyId, String deptCode) {
+//		List<PartyRelation> list = partyRelationDao.findByIdPartyIdFromAndRelationTypeId(companyId, PartyRelationType.PARENT_CHILD.getKey());
+//		if (null != list && !list.isEmpty()) {
+//			
+//		} else {
+//			return false;
+//		}
+		//重点优化：借助party_relation(party_id_from, relation_type_id, party_id_to)索引，避免无效回表和中间结果。
+		String sql = "select count(1) from party_relation a where a.party_id_from=? and a.relation_type_id='PARENT_CHILD' and exists(select 1 from hy101 b where b.id=a.party_id_to and b.group_code=?)";
+		return jdbcTemplate.queryForObject(sql, Boolean.class, companyId, deptCode);
+	}
+	
+	/**
+	 * 查询公司是否存指定部门名称。
+	 * 
+	 * @param companyId 公司标识
+	 * @param deptName  部门名称
+	 * @return
+	 */
+	public boolean checkCompanyDeptName(String companyId, String deptName) {
+		String sql = "select count(1) from party_relation a where a.party_id_from=? and a.relation_type_id='PARENT_CHILD' and exists(select 1 from hy101 b where b.id=a.party_id_to and b.group_name=?)";
+		return jdbcTemplate.queryForObject(sql, Boolean.class, companyId, deptName);
+	}
+	
+	/**
 	 * 查询部门的负责人。
 	 * 
 	 * @param deptId 部门标识

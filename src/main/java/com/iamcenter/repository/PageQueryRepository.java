@@ -86,6 +86,10 @@ public class PageQueryRepository extends AbstractBizService {
 			sb.append(" and a.party_code like ?");
 			params.add("%" + dto.getPartyCode() + "%");
 		}
+		if (StringUtils.isNotBlank(dto.getPartyName())) {
+			sb.append(" and a.last_name like ?");
+			params.add("%" + dto.getPartyName() + "%");
+		}
 		if (StringUtils.isNotBlank(dto.getMobilePhone())) {
 			sb.append(" and a.mobile_phone like ?");
 			params.add("%" + dto.getMobilePhone() + "%");
@@ -128,6 +132,7 @@ public class PageQueryRepository extends AbstractBizService {
 			sb.append(" and status_id=?");
 			params.add(dto.getStatusId());
 		}
+		sb.append(" order by sequence asc,create_time desc");
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), RoleVO.class);
 	}
 
@@ -182,7 +187,7 @@ public class PageQueryRepository extends AbstractBizService {
 //			params.add(dto.getAppId());
 //		}
 		if (StringUtils.isNotBlank(dto.getName())) {
-			sb.append(" and a.name like ?");
+			sb.append(" and a.last_name like ?");
 			params.add("%" + dto.getName() + "%");
 		}
 		if (StringUtils.isNotBlank(dto.getStatusId())) {
@@ -217,7 +222,7 @@ public class PageQueryRepository extends AbstractBizService {
 			sb.append(" and a.group_name like ?");
 			params.add("%" + dto.getDeptName() + "%");
 		}
-		sb.append(" order by b.sequence desc");
+		sb.append(" order by b.sequence asc,c.create_time desc");
 		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), DepartmentVO.class);
 	}
 	

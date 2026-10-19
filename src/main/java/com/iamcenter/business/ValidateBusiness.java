@@ -46,4 +46,28 @@ public class ValidateBusiness {
 		return result;
 	}
 	
+	/**
+	 * 查询当前登录账号的应用信息。<br>
+	 *
+	 * @param appId 应用标识。<br>
+	 * 
+	 */
+	public RstResult<AppInfo> getLoginAppInfo(String appId) {
+		if (StringUtils.isBlank(appId)) {
+			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		}
+		if (applicationName.equals(appId.trim())) {
+			return ResultBuilder.normalResult();
+		}
+		AppInfo appInfo = appInfoRepository.findByAppId(Long.valueOf(appId));
+		if (null == appInfo) {
+			return ResultBuilder.buildResult("40000002", "应用标识不存在!");
+		}
+		if (!appInfo.getAppStatus().equals(StatusEnum.ENABLE.getValue())) {
+			return ResultBuilder.buildResult("40000003", "此应用已被停用!");
+		}
+
+		return ResultBuilder.normalResult(appInfo);
+	}
+	
 }
