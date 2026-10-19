@@ -365,16 +365,22 @@ public class PartyService implements PartyContract {
 		if (dto.getName() == null || dto.getName().isEmpty()) {
 			return ResultBuilder.buildResult("40000001", "用户姓名不能为空");
 		}
+		if (partyBusiness.checkCompanyPartyCode(companyId, dto.getCode())) {
+			logger.error("--->人员编号[{}]重复!.", dto.getCode());
+			return ResultBuilder.buildResult(ErrorCode.EXIST_CODE);
+		}
+		partyPersonDao.findByCode(companyId);
 		if (null != getPersonBySfz(dto.getIdCard())) {
 			logger.error("--->身份证号[{}]重复!.", dto.getIdCard());
 			return ResultBuilder.buildResult(ErrorCode.ERROR_USER_IDCARD_INVALID, "身份证号重复!");
-		} else if (null == dto.getName()) {
-			logger.warn("用户姓名有误，请检查数据完整性!");
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
+		} 
+//		if (null == dto.getName()) {
+//			logger.warn("用户姓名有误，请检查数据完整性!");
+//			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
 //		} else if (null == dto.getMobilePhone()) {
 //			logger.warn("用户身机号有误，请检查数据完整性!");
 //			return ResultBuilder.buildResult(ErrorCode.PARAMS_EMPTY);
-		}
+//		}
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
 			if (!partyGroupRepository.existsById(dto.getDeptId())) {
 				return ResultBuilder.buildResult("40000001", "部门信息不存在！");
@@ -399,9 +405,15 @@ public class PartyService implements PartyContract {
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
 			String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
 			String relationType = PartyRelationType.PARENT_CHILD.getKey();
-			partyBusiness.createRelation(dto.getDeptId(), roleIdFrom, person.getPartyId(), person.getRoleTypeId(),
-					relationType);
-			logger.info("--->[{}]成员关系创建完成 ...", person.getLastName());
+			partyBusiness.createRelation(dto.getDeptId(), roleIdFrom, person.getPartyId(), person.getRoleTypeId(), relationType);
+			logger.info("--->[{}]成员部门关系创建完成 ...", person.getLastName());
+		}
+		/* 3、人员归属公司信息创建 */
+		if (StringUtils.isNotBlank(companyId)) {
+			String roleIdFrom = RoleTypeEnum.ROLE_COMPANY.getKey();
+			String relationType = PartyRelationType.EMPLOYMENT.getKey();
+			partyBusiness.createRelation(companyId, roleIdFrom, person.getPartyId(), person.getRoleTypeId(), relationType);
+			logger.info("--->[{}]成员公司关系创建完成 ...", person.getLastName());
 		}
 
 //		if (null != dto.getPhone()) {

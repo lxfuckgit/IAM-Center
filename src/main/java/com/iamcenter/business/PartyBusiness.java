@@ -1,5 +1,6 @@
 package com.iamcenter.business;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -7,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import com.iamcenter.repository.party.PartyRelationRepository;
 import com.javapai.framework.common.service.AbstractBizService;
 import com.saasapi.contract.party.enums.PartyRelationType;
 import com.saasapi.contract.party.enums.RoleTypeEnum;
+import com.saasapi.contract.party.vo.DeptTreeVO;
 
 @Component
 public class PartyBusiness extends AbstractBizService {
@@ -74,6 +77,37 @@ public class PartyBusiness extends AbstractBizService {
 	public boolean checkCompanyDeptName(String companyId, String deptName) {
 		String sql = "select count(1) from party_relation a where a.party_id_from=? and a.relation_type_id='PARENT_CHILD' and exists(select 1 from hy101 b where b.id=a.party_id_to and b.group_name=?)";
 		return jdbcTemplate.queryForObject(sql, Boolean.class, companyId, deptName);
+	}
+	
+	/**
+	 * 查询公司是否存指定人员编号。
+	 * 
+	 * @param companyId 公司标识
+	 * @param deptCode  部门编号
+	 * @return
+	 */
+	public boolean checkCompanyPartyCode(String companyId, String partyCode) {
+		//重点优化：借助party_relation(party_id_from, relation_type_id, party_id_to)索引，避免无效回表和中间结果。
+		String sql = "select count(1) from party_relation a where a.party_id_from=? and a.relation_type_id='EMPLOYMENT' and exists(select 1 from hy102 b where b.id=a.party_id_to and b.code=?)";
+		return jdbcTemplate.queryForObject(sql, Boolean.class, companyId, partyCode);
+	}
+
+	/**
+	 * 查询部门的子部门信息。
+	 * 
+	 * @param deptId 部门标识
+	 * @return
+	 */
+	public List<DeptTreeVO> listChildDept(String deptId) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("select a.id as dept_id,a.group_code as dept_code,a.group_name as dept_name from hy101 a");
+		sb.append(" left join party_relation b on a.id=b.party_id_to");
+		sb.append(" left join hy100 c on a.id=c.id");
+		sb.append(" where c.role_type_id='ROLE_DETP' and b.party_id_from=?");
+		List<Object> params = new ArrayList<Object>();
+		params.add(deptId);
+		sb.append(" order by b.sequence asc,c.create_time desc");
+		return jdbcTemplate.query(sb.toString(), new BeanPropertyRowMapper<DeptTreeVO>(DeptTreeVO.class), params.toArray());
 	}
 	
 	/**
