@@ -203,39 +203,11 @@ public class PageQueryRepository extends AbstractBizService {
 	 * @param dto
 	 * @return
 	 */
-	public PageResult<DepartmentVO> treeDepartment(DeptListDTO dto) {
-		List<Object> params = new ArrayList<Object>();
-		StringBuffer sb = new StringBuffer();
-		sb.append("select a.id as dept_id,a.group_code as dept_code,a.group_name as dept_name,b.sequence as dept_seq from hy101 a");
-		sb.append(" left join party_relation b on a.id=b.party_id_to");
-		sb.append(" left join hy100 c on a.id=c.id");
-		sb.append(" where c.role_type_id='ROLE_DETP'");
-		if (StringUtils.isNotBlank(dto.getCompanyId())) {
-			sb.append(" and b.party_id_from=?");
-			params.add(dto.getCompanyId());
-		}
-		if (StringUtils.isNotBlank(dto.getDeptCode())) {
-			sb.append(" and b.a.group_code=?");
-			params.add(dto.getDeptCode());
-		}
-		if (StringUtils.isNotBlank(dto.getDeptName())) {
-			sb.append(" and a.group_name like ?");
-			params.add("%" + dto.getDeptName() + "%");
-		}
-		sb.append(" order by b.sequence asc,c.create_time desc");
-		return getPage(sb.toString(), params, dto.getPageIndex(), dto.getPageSize(), DepartmentVO.class);
-	}
-
-	/**
-	 * 部门信息。
-	 * 
-	 * @param dto
-	 * @return
-	 */
 	public PageResult<DepartmentVO> listDepartment(DeptListDTO dto) {
 		List<Object> params = new ArrayList<Object>();
 		StringBuffer sb = new StringBuffer();
-		sb.append("select a.id as dept_id,a.group_code as dept_code,a.group_name as dept_name,b.sequence as dept_seq,c.status_id,c.create_time from hy101 a");
+		sb.append("select a.id as dept_id,a.group_code as dept_code,a.group_name as dept_name,b.sequence as dept_seq,b.party_id_from as parent_id,c.status_id,c.create_time");
+		sb.append(" from hy101 a");
 		sb.append(" left join party_relation b on a.id=b.party_id_to");
 		sb.append(" left join hy100 c on a.id=c.id");
 		sb.append(" where c.role_type_id='ROLE_DETP'");

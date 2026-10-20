@@ -27,6 +27,8 @@ public interface PartyRelationRepository extends JpaRepository<PartyRelation, Pa
 	void deleteByIdPartyIdTo(String partyIdTo);
 	
 	Long deleteByIdPartyIdToAndRelationTypeId(String partyIdTo, String relationTypeId);
+	
+	Long deleteByPartyIdFromAndPartyIdToAndRelationTypeId(String partyIdFrom, String partyIdTo, String relationTypeId);
 
 	/**
 	 * 查询部门是否存指定人员。

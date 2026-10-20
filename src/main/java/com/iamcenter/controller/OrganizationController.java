@@ -33,6 +33,7 @@ import com.saasapi.contract.party.dto.PersonListDTO;
 import com.saasapi.contract.party.dto.PersonUpdateDTO;
 import com.saasapi.contract.party.vo.CompanyVO;
 import com.saasapi.contract.party.vo.DepartmentVO;
+import com.saasapi.contract.party.vo.DeptHierarchy;
 import com.saasapi.contract.party.vo.DeptTreeVO;
 import com.saasapi.contract.party.vo.PersonVO;
 
@@ -78,6 +79,11 @@ public class OrganizationController {
 	@RequestMapping("/listDepartment")
 	public PageResult<DepartmentVO> listDepartment(@RequestBody DeptListDTO dto) {
 		return partyService.listDepartment(dto);
+	}
+	
+	@RequestMapping("/hierarchyDepartment")
+	public RstResult<List<DeptHierarchy>> hierarchyDepartment‌(@RequestBody DeptListDTO dto) {
+		return partyService.hierarchyDepartment(dto);
 	}
 	
 	@PostMapping("/createDepartment")

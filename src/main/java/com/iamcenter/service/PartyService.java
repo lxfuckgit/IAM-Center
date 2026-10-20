@@ -1,13 +1,16 @@
 package com.iamcenter.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ import com.iamcenter.repository.SysLoginRepository;
 import com.iamcenter.repository.apps.AppInfoRepository;
 import com.iamcenter.repository.party.PartyGroupRepository;
 import com.iamcenter.repository.party.PartyPersonRepository;
+import com.iamcenter.repository.party.PartyRelationDao;
 import com.iamcenter.repository.party.PartyRelationRepository;
 import com.iamcenter.repository.party.PartyRepository;
 import com.javapai.framework.action.PageResult;
@@ -54,6 +58,7 @@ import com.saasapi.contract.party.enums.PartyType;
 import com.saasapi.contract.party.enums.RoleTypeEnum;
 import com.saasapi.contract.party.vo.CompanyVO;
 import com.saasapi.contract.party.vo.DepartmentVO;
+import com.saasapi.contract.party.vo.DeptHierarchy;
 import com.saasapi.contract.party.vo.DeptTreeVO;
 import com.saasapi.contract.party.vo.PersonVO;
 import com.saasapi.contract.party.vo.Supplier;
@@ -69,7 +74,7 @@ public class PartyService implements PartyContract {
 	@Autowired
 	private PartyPersonRepository partyPersonDao;
 	@Autowired
-	PartyRelationRepository partyRelationDao;
+	PartyRelationRepository partyRelationRepository;
 
 	@Autowired
 	private RBACBusiness rbacBusiness;
@@ -90,6 +95,9 @@ public class PartyService implements PartyContract {
 
 	@Autowired
 	private SysLoginRepository sysLoginRepository;
+	
+	@Autowired
+	private PartyRelationDao partyRelationDao;
 
 	@Override
 	public PageResult<CompanyVO> listCompany(CompanyListDTO dto) {
@@ -152,7 +160,7 @@ public class PartyService implements PartyContract {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
 		}
 
-		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getCompanyId());
+		List<PartyRelation> prList = partyRelationRepository.findByIdPartyIdFrom(dto.getCompanyId());
 		if (null != prList && prList.size() > 0) {
 			logger.info("--->[{}]公司信息存在引用关系！", dto.getCompanyId());
 		}
@@ -169,8 +177,18 @@ public class PartyService implements PartyContract {
 			logger.info("--->[{}]公司标识信息不明确！", dto.getCompanyId());
 			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
 		}
-		List<DeptTreeVO> treeList = partyBusiness.listChildDept(companyId);
-		treeList.stream().forEach(action -> action.setChildList(partyBusiness.listChildDept(action.getDeptId())));
+		List<DeptTreeVO> treeList = new ArrayList<DeptTreeVO>();
+		List<DepartmentVO> deptList = partyBusiness.listChildDept(companyId);
+		deptList.stream().forEach(action -> {
+			DeptTreeVO node = new DeptTreeVO();
+			node.setDeptId(action.getDeptId());
+			node.setDeptCode(action.getDeptCode());
+			node.setDeptName(action.getDeptName());
+			node.setParentId(action.getParentId());
+			List<DepartmentVO> subList = partyBusiness.listChildDept(action.getDeptId());
+			node.setChildList(convertToDepartyTree(subList));
+			treeList.add(node);
+		});
 		return ResultBuilder.normalResult(treeList);
 	}
 
@@ -187,8 +205,12 @@ public class PartyService implements PartyContract {
 		}
 
 		PageResult<DepartmentVO> pageList = pageQueryRepository.listDepartment(dto);
-		// 查找部门负责人
 		pageList.getData().forEach(action -> {
+			// 修正数据（当部门有上级部门时才显示parent_id
+			if (action.getParentId().equals(dto.getCompanyId())) {
+				action.setParentId(null);
+			}
+			// 查找部门负责人
 			PartyPerson person = partyBusiness.getDeptPartyOwner(action.getDeptId());
 			if (null != person) {
 				action.setHeadPartyId(person.getPartyId());
@@ -197,6 +219,43 @@ public class PartyService implements PartyContract {
 			}
 		});
 		return pageList;
+	}
+	
+	@Override
+	public RstResult<List<DeptHierarchy>> hierarchyDepartment(DeptListDTO dto) {
+		RstResult<String> checkAppResult = validateBusiness.checkLoginAppId(tokenBusiness.getTokenAssocAppId());
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return ResultBuilder.buildResult(ErrorCode.EXCEPTION_SELECT);
+		}
+		dto.setCompanyId(checkAppResult.getData());
+		if (StringUtils.isEmpty(dto.getCompanyId())) {
+			logger.info("--->[{}]公司标识信息不明确！", dto.getCompanyId());
+			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
+		}
+
+		List<DepartmentVO> deptList = partyBusiness.listChildDept(dto.getCompanyId());
+		/* 判断公司部门（顶级） */
+		if(null == deptList || deptList.size() == 0) {
+			return ResultBuilder.normalResult();
+		}
+		List<DeptHierarchy> treeList = new ArrayList<DeptHierarchy>();
+		deptList.stream().forEach(action -> {
+			// 修正数据（当部门有上级部门时才显示parent_id
+			if (action.getParentId().equals(dto.getCompanyId())) {
+				action.setParentId(null);
+			}
+			DeptHierarchy hierarchy = convertToHierarchy(action);
+			List<DepartmentVO> tempList = partyBusiness.listChildDept(action.getDeptId());
+			if (null == deptList || deptList.size() == 0) {
+				hierarchy.setChildList(List.of());
+			} else {
+				hierarchy.setChildList(tempList.stream().map(vo -> {
+					return convertToHierarchy(vo);
+				}).collect(Collectors.toList()));
+			}
+			treeList.add(hierarchy);
+		});
+		return ResultBuilder.normalResult(treeList);
 	}
 
 	@Override
@@ -284,18 +343,31 @@ public class PartyService implements PartyContract {
 //			// 当部门负责人不一致时进行更新
 //			partyBusiness.updateDeptPartyOwner(optional.get().getPartyId(), dto.getHeadPartyId(), person.getPartyId());
 //		}
-		/* 修改部门排序号 */
-		if (null != dto.getDeptSeq() && dto.getDeptSeq() > 0) {
+//		
+		/* 修改部门上下级 */
+		if (StringUtils.isNotBlank(dto.getParentId())) {
+			Integer depSeq = null == dto.getDeptSeq() ? 0 : dto.getDeptSeq();
 			String relationTypeId = PartyRelationType.PARENT_CHILD.getKey();
-			List<PartyRelation> list = partyRelationDao.findByIdPartyIdToAndRelationTypeId(dto.getDeptId(),
-					relationTypeId);
+			List<PartyRelation> list = partyRelationRepository.findByIdPartyIdToAndRelationTypeId(dto.getDeptId(), relationTypeId);
 			if (null == list || list.size() == 0) {
-				logger.info("--->[{}]部门未关联公司信息！", dto.getDeptId());
-			}
-			if (!dto.getDeptSeq().equals(list.get(0).getSequence())) {
+				logger.info("--->[{}]部门未关联子部门信息！", dto.getDeptId());
+				String roleId = RoleTypeEnum.ROLE_DETP.getKey();
+				partyRelationDao.createPartyParentChildRelation(dto.getParentId(), roleId, dto.getDeptId(), roleId, depSeq);
+			} else if (!dto.getParentId().equals(list.get(0).getId().getPartyIdFrom())) {
+				// 否则检查上级（这里只保留一个上级）
+				partyRelationRepository.delete(list.get(0));
+				logger.info("--->[{}]部门原父节点[{}]更新完毕！", dto.getDeptId(), dto.getParentId());
+				String roleId = RoleTypeEnum.ROLE_DETP.getKey();
+				partyRelationDao.createPartyParentChildRelation(dto.getParentId(), roleId, dto.getDeptId(), roleId, depSeq);
+				logger.info("--->[{}]部门新父节点[{}]更新完毕！", dto.getDeptId(), dto.getParentId());
+//			} else if (null != dto.getDeptSeq() && dto.getDeptSeq() > 0 && !dto.getDeptSeq().equals(list.get(0).getSequence())) {
+			} else if (!depSeq.equals(list.get(0).getSequence())) {
+				// 修改部门排序号(必需指定上级才能修改排序号）
 				list.get(0).setSequence(dto.getDeptSeq());
-				partyRelationDao.save(list.get(0));
+				partyRelationRepository.save(list.get(0));
 				logger.info("--->[{}]部门排序号[{}]更新完毕！", dto.getDeptId(), dto.getDeptSeq());
+			} else {
+				// 其它情况，暂不处理
 			}
 		}
 
@@ -309,13 +381,13 @@ public class PartyService implements PartyContract {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_ID);
 		}
 
-		List<PartyRelation> prList = partyRelationDao.findByIdPartyIdFrom(dto.getDeptId());
+		List<PartyRelation> prList = partyRelationRepository.findByIdPartyIdFrom(dto.getDeptId());
 		if (null != prList && prList.size() > 0) {
 			logger.info("--->[{}]部门信息存在引用关系！", dto.getDeptId());
 			return ResultBuilder.buildResult(PartyErrorCode.ERROR_HAS_CHILD);
 		}
 		
-		partyRelationDao.deleteAll(partyRelationDao.findByIdPartyIdTo(dto.getDeptId()));
+		partyRelationRepository.deleteAll(partyRelationRepository.findByIdPartyIdTo(dto.getDeptId()));
 		logger.info("--->[{}]部门关联信息已删除！", dto.getDeptId());
 		partyGroupRepository.deleteById(dto.getDeptId());
 		logger.info("--->[{}]部门信息已删除！", dto.getDeptId());
@@ -403,17 +475,11 @@ public class PartyService implements PartyContract {
 		
 		/* 2、人员归属部门信息创建 */
 		if (StringUtils.isNotBlank(dto.getDeptId())) {
-			String roleIdFrom = RoleTypeEnum.ROLE_DETP.getKey();
-			String relationType = PartyRelationType.PARENT_CHILD.getKey();
-			partyBusiness.createRelation(dto.getDeptId(), roleIdFrom, person.getPartyId(), person.getRoleTypeId(), relationType);
-			logger.info("--->[{}]成员部门关系创建完成 ...", person.getLastName());
+			partyRelationDao.createDeptEmployment(dto.getDeptId(), person.getPartyId());
 		}
 		/* 3、人员归属公司信息创建 */
 		if (StringUtils.isNotBlank(companyId)) {
-			String roleIdFrom = RoleTypeEnum.ROLE_COMPANY.getKey();
-			String relationType = PartyRelationType.EMPLOYMENT.getKey();
-			partyBusiness.createRelation(companyId, roleIdFrom, person.getPartyId(), person.getRoleTypeId(), relationType);
-			logger.info("--->[{}]成员公司关系创建完成 ...", person.getLastName());
+			partyRelationDao.createCompanyEmployment(companyId, person.getPartyId());
 		}
 
 //		if (null != dto.getPhone()) {
@@ -591,11 +657,7 @@ public class PartyService implements PartyContract {
 		
 		/* 保存上下级关系 */
 		if (StringUtils.isNotBlank(dto.getParentId())) {
-			PartyRelation relation = new PartyRelation();
-			relation.setId(new PartyRelationId(dto.getParentId(), parentRoleId, pg.getPartyId(), dto.getRoleType().name()));
-			relation.setRelationTypeId(PartyRelationType.PARENT_CHILD.getKey());
-			relation.setSequence(dto.getParentSeq());
-			partyRelationDao.save(relation);
+			partyRelationDao.createPartyParentChildRelation(dto.getParentId(), parentRoleId, pg.getPartyId(), dto.getRoleType().name(), dto.getParentSeq());
 			logger.info("--->[{}]团体关系1创建完成 ...", pg.getGroupName());
 		}
 		
@@ -605,7 +667,7 @@ public class PartyService implements PartyContract {
 			relation.setId(new PartyRelationId(pg.getPartyId(), dto.getRoleType().name(), dto.getHeadPartyId(), RoleTypeEnum.ROLE_EMPLOYEE.getKey()));
 			relation.setRelationTypeId(PartyRelationType.PARTY_OWNER.getKey());
 			relation.setSequence(0);
-			partyRelationDao.save(relation);
+			partyRelationRepository.save(relation);
 			logger.info("--->[{}]团体关系2创建完成 ...", pg.getGroupName());
 		}
 		
@@ -726,5 +788,35 @@ public class PartyService implements PartyContract {
 //      }
 //      return ResponseResultBuilder.buildNormalResponse(user);
 //  }
+
+	private List<DeptTreeVO> convertToDepartyTree(List<DepartmentVO> deptList) {
+		if (null == deptList || deptList.size() == 0) {
+			return List.of();
+		}
+		return deptList.stream().map(vo -> {
+			DeptTreeVO tree = new DeptTreeVO();
+			tree.setDeptId(vo.getDeptId());
+			tree.setParentId(vo.getParentId());
+			tree.setDeptCode(vo.getDeptCode());
+			tree.setDeptName(vo.getDeptName());
+			return tree;
+		}).collect(Collectors.toList());
+	}
+	
+	/**
+	 * DepartmentVO -> DeptHierarchy 转换，并填充负责人信息
+	 */
+	private DeptHierarchy convertToHierarchy(DepartmentVO dept) {
+		DeptHierarchy hierarchy = new DeptHierarchy();
+		BeanUtils.copyProperties(dept, hierarchy);
+		// 查找部门负责人
+		PartyPerson person = partyBusiness.getDeptPartyOwner(dept.getDeptId());
+		if (null != person) {
+			hierarchy.setHeadPartyId(person.getPartyId());
+			hierarchy.setHeadPartyName(person.getLastName());
+			hierarchy.setContactPhone(person.getMobilePhone());
+		}
+		return hierarchy;
+	}
 
 }
