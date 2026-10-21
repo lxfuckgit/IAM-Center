@@ -20,7 +20,6 @@ import com.iamcenter.repository.party.PartyRelationDao;
 import com.iamcenter.repository.party.PartyRelationRepository;
 import com.javapai.framework.common.service.AbstractBizService;
 import com.saasapi.contract.party.enums.PartyRelationType;
-import com.saasapi.contract.party.enums.RoleTypeEnum;
 import com.saasapi.contract.party.vo.DepartmentVO;
 
 @Component
@@ -131,56 +130,12 @@ public class PartyBusiness extends AbstractBizService {
 	}
 	
 	/**
-	 * 创建部门的负责人。
-	 * 
-	 * @param deptId  部门标识
-	 * @param partyId 负责人标识
-	 */
-	@Transactional
-	public void createDeptPartyOwner(String deptId, String partyId) {
-		String roleIdFrom = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
-		String roleIdTo = RoleTypeEnum.ROLE_DETP.getKey();
-		String relationType = PartyRelationType.PARTY_OWNER.getKey();
-		createRelation(partyId, roleIdFrom, deptId, roleIdTo, relationType);
-	}
-	
-	/**
-	 * 删除部门的负责人。
-	 * 
-	 * @param deptId     部门标识
-	 * @param newPartyId 新负责人标识
-	 * @param oldPartyId 老负责人标识
-	 */
-	@Transactional
-	public void deleteDeptPartyOwner(String deptId, String newPartyId, String oldPartyId) {
-		String roleIdFrom = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
-		String roleIdTo = RoleTypeEnum.ROLE_DETP.getKey();
-		partyRelationRepository.deleteById(new PartyRelationId(oldPartyId, roleIdFrom, deptId, roleIdTo));
-		logger.info("--->关系移除完成: {} -> {} [{}]", oldPartyId, deptId, PartyRelationType.PARTY_OWNER.getKey());
-	}
-	
-	/**
-	 * 更新部门的负责人。
-	 * 
-	 * @param deptId     部门标识
-	 * @param newPartyId 新负责人标识
-	 * @param oldPartyId 老负责人标识
-	 */
-	@Transactional
-	public void updateDeptPartyOwner(String deptId, String newPartyId, String oldPartyId) {
-		deleteDeptPartyOwner(deptId, newPartyId, oldPartyId);
-		String roleIdFrom = RoleTypeEnum.ROLE_EMPLOYEE.getKey();
-		String roleIdTo = RoleTypeEnum.ROLE_DETP.getKey();
-		createRelation(newPartyId, roleIdFrom, deptId, roleIdTo, PartyRelationType.PARTY_OWNER.getKey());
-	}
-	
-	/**
 	 * 读取用户的部门信息。
 	 * 
 	 * @param partyId 用户标识
 	 */
 	public PartyGroup getPersonDepartyment(String partyId) {
-		String relationTypeId = PartyRelationType.PARENT_CHILD.getKey();
+		String relationTypeId = PartyRelationType.GROUP_MEMBER.getKey();
 		List<PartyRelation> list = partyRelationRepository.findByIdPartyIdToAndRelationTypeId(partyId, relationTypeId);
 		if (null == list || list.size() == 0) {
 			return null;
@@ -203,13 +158,11 @@ public class PartyBusiness extends AbstractBizService {
 	@Transactional
 	public void updatePartyToDept(String partyId, String deptId) {
 		/* 1、清除老部门 */
-		partyRelationDao.deleteDeptEmployment(deptId, partyId);
-//		String relationTypeId = PartyRelationType.PARENT_CHILD.getKey();
-//		List<PartyRelation> list = partyRelationDao.findByIdPartyIdToAndRelationTypeId(partyId, relationTypeId);
-//		if (null != list && list.size() > 0) {
-//			Long dSize = partyRelationDao.deleteByIdPartyIdToAndRelationTypeId(partyId, relationTypeId);
-//			logger.info("--->已删除人员[{}]关联的部门记录[{}]！", partyId, dSize);
-//		}
+		String relationTypeId = PartyRelationType.GROUP_MEMBER.getKey();
+		List<PartyRelation> list = partyRelationRepository.findByIdPartyIdToAndRelationTypeId(partyId, relationTypeId);
+		if (null != list && list.size() > 0) {
+			partyRelationDao.deleteDeptEmployment(list.get(0).getId().getPartyIdFrom(), partyId);
+		}
 		/* 2、添加新部门 */
 		partyRelationDao.createDeptEmployment(deptId, partyId);
 	}

@@ -27,23 +27,14 @@ public class ValidateBusiness {
 	 * 
 	 */
 	public RstResult<String> checkLoginAppId(String appId) {
-		if (StringUtils.isBlank(appId)) {
-			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
+		RstResult<AppInfo> result = checkLoginAppInfo(appId);
+		if (ResultBuilder.RESPONSE_OK.equals(result.getCode())) {
+			RstResult<String> checkResult = ResultBuilder.normalResult();
+			checkResult.setData(result.getData().getCompanyId());
+			return checkResult;
+		} else {
+			return ResultBuilder.buildResult(result.getCode(), result.getMessage());
 		}
-		if (applicationName.equals(appId.trim())) {
-			return ResultBuilder.normalResult();
-		}
-		AppInfo appInfo = appInfoRepository.findByAppId(Long.valueOf(appId));
-		if (null == appInfo) {
-			return ResultBuilder.buildResult("40000002", "应用标识不存在!");
-		}
-		if (!appInfo.getAppStatus().equals(StatusEnum.ENABLE.getValue())) {
-			return ResultBuilder.buildResult("40000003", "此应用已被停用!");
-		}
-
-		RstResult<String> result = ResultBuilder.normalResult();
-		result.setData(appInfo.getCompanyId());
-		return result;
 	}
 	
 	/**
@@ -52,7 +43,7 @@ public class ValidateBusiness {
 	 * @param appId 应用标识。<br>
 	 * 
 	 */
-	public RstResult<AppInfo> getLoginAppInfo(String appId) {
+	public RstResult<AppInfo> checkLoginAppInfo(String appId) {
 		if (StringUtils.isBlank(appId)) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_APPID);
 		}

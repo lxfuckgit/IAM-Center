@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.iamcenter.business.RBACBusiness;
 import com.iamcenter.business.SecurityBusiness;
 import com.iamcenter.business.TokenBusiness;
+import com.iamcenter.business.ValidateBusiness;
 import com.iamcenter.config.jwt.JwtUtil;
+import com.iamcenter.domain.apps.AppInfo;
 import com.iamcenter.domain.security.SysLogin;
 import com.iamcenter.domain.security.SysLoginRole;
 import com.iamcenter.domain.security.SysResource;
@@ -88,6 +90,9 @@ public class SecurityService implements SecurityContract {
 	
 	@Autowired
 	TokenBusiness tokenBusiness;
+	
+	@Autowired
+	ValidateBusiness validateBusiness;
 	
 	@Autowired
 	SecurityBusiness securityBusiness;
@@ -387,10 +392,12 @@ public class SecurityService implements SecurityContract {
 	
 	@Override
 	public RstResult<String> deleteRole(RoleDeleteDTO dto) {
-		String userId = SecurityContextHolder.getContext().getAuthentication().getName();
-		if(StringUtils.isEmpty(userId)) {
-			return ResultBuilder.buildResult(ErrorCode.INVALID_TOKEN);
+		String appId = tokenBusiness.getTokenAssocAppId();
+		RstResult<AppInfo> checkAppResult = validateBusiness.checkLoginAppInfo(appId);
+		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
+			return ResultBuilder.buildResult(checkAppResult.getCode(), checkAppResult.getMessage());
 		}
+		/* 1、业务检查 */
 		Optional<SysRole> optional = roleRepository.findById(dto.getRoleId());
 		if (!optional.isPresent()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
@@ -398,16 +405,16 @@ public class SecurityService implements SecurityContract {
 		if (!optional.get().getAppId().equals(dto.getAppId())) {
 			return ResultBuilder.buildResult(ErrorCode.PARAMS_ILLEGE);
 		}
-		if (!optional.get().getCreatorId().equals(userId)) {
-			return ResultBuilder.buildResult("40000002", "当前角色只能由创建人删除!");
+		if (optional.get().getRoleCode().equals(checkAppResult.getData().getAppCode())) {
+			return ResultBuilder.buildResult("40000002", "当前角色只能由[超级管理员]删除!");
 		}
 		List<SysLoginRole> roleList = loginRoleRepository.findByRoleId(dto.getRoleId());
 		if (null != roleList && roleList.size() > 0) {
 			return ResultBuilder.buildResult("40000002", "当前角色存在引用关系无法删除!");
 		}
-		/* 删除角色 */
+		/* 2、删除角色 */
 		roleRepository.delete(optional.get());
-		logger.info("--->[{}]角色信息已删除！", dto.getRoleId());
+		logger.info("--->提示：应用[{}]的角色[{}]信息已删除！", appId, optional.get().getRoleCode());
 		return ResultBuilder.normalResult();
 	}
 	

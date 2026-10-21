@@ -261,7 +261,7 @@ public class PartyService implements PartyContract {
 	@Override
 	@Transactional
 	public RstResult<String> createDepartment(DeptCreateDTO dto) {
-		RstResult<AppInfo> checkAppResult = validateBusiness.getLoginAppInfo(tokenBusiness.getTokenAssocAppId());
+		RstResult<AppInfo> checkAppResult = validateBusiness.checkLoginAppInfo(tokenBusiness.getTokenAssocAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
 		}
@@ -305,7 +305,7 @@ public class PartyService implements PartyContract {
 	@Override
 	@Transactional
 	public RstResult<String> updateDepartment(DeptUpdateDTO dto) {
-		RstResult<AppInfo> checkAppResult = validateBusiness.getLoginAppInfo(tokenBusiness.getTokenAssocAppId());
+		RstResult<AppInfo> checkAppResult = validateBusiness.checkLoginAppInfo(tokenBusiness.getTokenAssocAppId());
 		if (!ResultBuilder.RESPONSE_OK.equals(checkAppResult.getCode())) {
 			return ResultBuilder.buildResult(PartyErrorCode.PARAMS_NO_COMPANY);
 		}
@@ -402,10 +402,10 @@ public class PartyService implements PartyContract {
 		PartyPerson person = partyBusiness.getDeptPartyOwner(dto.getDeptId());
 		if (null == person || StringUtils.isBlank(person.getPartyId())) {
 			// 当部门没有负责人时进行创建
-			partyBusiness.createDeptPartyOwner(dto.getDeptId(), dto.getPartyId());
+			partyRelationDao.createDeptPartyOwner(dto.getDeptId(), dto.getPartyId());
 		} else {
 			// 当部门负责人不一致时进行更新
-			partyBusiness.updateDeptPartyOwner(dto.getDeptId(), dto.getPartyId(), person.getPartyId());
+			partyRelationDao.updateDeptPartyOwner(dto.getDeptId(), dto.getPartyId(), person.getPartyId());
 		}
 		return ResultBuilder.normalResult();
 	}
