@@ -51,6 +51,7 @@ import com.saasapi.contract.party.dto.DeptUpdateDTO;
 import com.saasapi.contract.party.dto.GroupCreateDTO;
 import com.saasapi.contract.party.dto.PartyStatusChangeDTO;
 import com.saasapi.contract.party.dto.PersonCreateDTO;
+import com.saasapi.contract.party.dto.PersonGetDTO;
 import com.saasapi.contract.party.dto.PersonListDTO;
 import com.saasapi.contract.party.dto.PersonUpdateDTO;
 import com.saasapi.contract.party.enums.PartyRelationType;
@@ -570,6 +571,24 @@ public class PartyService implements PartyContract {
 
 		return ResultBuilder.normalResult();
 	}
+	
+	@Override
+	public RstResult<PersonVO> getPerson(PersonGetDTO dto) {
+		if (StringUtils.isNotBlank(dto.getPartyId())) {
+			return getPersonById(dto.getPartyId());
+		} else if (StringUtils.isNotBlank(dto.getLoginId())) {
+			Optional<SysLogin> optional = sysLoginRepository.findById(Long.valueOf(dto.getLoginId()));
+			if (optional.isEmpty() || StringUtils.isBlank(optional.get().getPartyId())) {
+				logger.warn("--->当前登录信息({})无效，请检查！", dto.getLoginId());
+				return ResultBuilder.normalResult();
+			}
+			return getPersonById(optional.get().getPartyId());
+		} else if (StringUtils.isNotBlank(dto.getIdCard())) {
+			return ResultBuilder.normalResult(getPersonBySfz(dto.getIdCard()));
+		} else {
+			return ResultBuilder.normalResult();
+		}
+	}
 
 	@Override
 	public RstResult<PersonVO> getPersonById(String partyId) {
@@ -577,16 +596,6 @@ public class PartyService implements PartyContract {
 		if (!optional.isPresent()) {
 			return ResultBuilder.buildResult(ErrorCode.INVALID_ID);
 		}
-
-//		List<String> set = Arrays.asList("phone", "code", "realname", "realnameAllStatus");
-//		Map<String, String> data = getPerson(partyId, new HashSet<>(set));
-//		if (data != null) {
-//			vo.setUserId(Long.valueOf(data.get("userId")));
-//			vo.setUsername(data.get("phone"));
-//			vo.setRealname(data.get("realname"));
-//			vo.setRealnameStatus(data.get("realnameAllStatus"));
-//			return vo;
-//		}
 		return ResultBuilder.normalResult(convertPersonVO(optional.get()));
 	}
 
@@ -604,9 +613,19 @@ public class PartyService implements PartyContract {
 		vo.setPartyId(person.getPartyId());
 		vo.setPartyCode(person.getCode());
 		vo.setPartyName(person.getLastName());
+		vo.setNickName(person.getNickName());
 		vo.setMobilePhone(person.getMobilePhone());
 		vo.setSex(person.getSex());
 		vo.setIdCard(person.getIdCard());
+		PartyGroup pg = partyBusiness.getPersonDepartyment(person.getPartyId());
+		if (null != pg) {
+			vo.setDeptId(pg.getPartyId());
+			vo.setDeptName(pg.getGroupName());
+			PartyPerson pp = partyBusiness.getDeptPartyOwner(pg.getPartyId());
+			if (null != pp) {
+				vo.setHeadPartyId(pp.getPartyId());
+			}
+		}
 		return vo;
 	}
 

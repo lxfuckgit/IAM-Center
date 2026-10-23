@@ -29,6 +29,7 @@ import com.saasapi.contract.party.dto.DeptOwnerDTO;
 import com.saasapi.contract.party.dto.DeptUpdateDTO;
 import com.saasapi.contract.party.dto.PartyStatusChangeDTO;
 import com.saasapi.contract.party.dto.PersonCreateDTO;
+import com.saasapi.contract.party.dto.PersonGetDTO;
 import com.saasapi.contract.party.dto.PersonListDTO;
 import com.saasapi.contract.party.dto.PersonUpdateDTO;
 import com.saasapi.contract.party.vo.CompanyVO;
@@ -194,9 +195,14 @@ public class OrganizationController {
 		return partyService.createPerson(dto);
 	}
 
-	@RequestMapping("/getPerson/{partyId}")
-	public RstResult<PersonVO> getPerson(@PathVariable String partyId) {
-		return partyService.getPersonById(partyId);
+	@RequestMapping("/getPerson")
+	public RstResult<PersonVO> getPerson(@RequestBody PersonGetDTO dto) {
+		return partyService.getPerson(dto);
+	}
+	
+	@RequestMapping("/getPersonById")
+	public RstResult<PersonVO> getPersonById(@RequestBody PersonGetDTO dto) {
+		return partyService.getPersonById(dto.getPartyId());
 	}
 
 	@RequestMapping("/listPerson")

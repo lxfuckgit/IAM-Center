@@ -186,6 +186,10 @@ public class PageQueryRepository extends AbstractBizService {
 //			sb.append(" and b.app_id=?");
 //			params.add(dto.getAppId());
 //		}
+		if (StringUtils.isNotBlank(dto.getDeptId())) {
+			sb.append(" and c.party_id_from=?");
+			params.add(dto.getDeptId());
+		}
 		if (StringUtils.isNotBlank(dto.getName())) {
 			sb.append(" and a.last_name like ?");
 			params.add("%" + dto.getName() + "%");
