@@ -28,13 +28,14 @@ public class ValidateBusiness {
 	 */
 	public RstResult<String> checkLoginAppId(String appId) {
 		RstResult<AppInfo> result = checkLoginAppInfo(appId);
-		if (ResultBuilder.RESPONSE_OK.equals(result.getCode())) {
-			RstResult<String> checkResult = ResultBuilder.normalResult();
-			checkResult.setData(result.getData().getCompanyId());
-			return checkResult;
-		} else {
+		if (!ResultBuilder.RESPONSE_OK.equals(result.getCode())) {
 			return ResultBuilder.buildResult(result.getCode(), result.getMessage());
 		}
+		RstResult<String> checkResult = ResultBuilder.normalResult();
+		if (null != result.getData()) {
+			checkResult.setData(result.getData().getCompanyId());
+		}
+		return checkResult;
 	}
 	
 	/**
